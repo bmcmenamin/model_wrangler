@@ -25,11 +25,11 @@ class ModelWrangler(object):
             gradients for a set of inputs and target outputs
     """
 
-    def __init__(self, model_type=BaseNetwork, **kwargs):
+    def __init__(self, model_class=BaseNetwork, **kwargs):
         """Initialize a tensorflow model
         """
-        self.params = BaseNetwork.PARAM_CLASS(kwargs)
-        self.tf_mod = model_type(self.params)
+        self.params = model_class.PARAM_CLASS(kwargs)
+        self.tf_mod = model_class(self.params)
 
     def save(self, iteration):
         """Save model parameters in a JSON and model weights in TF format

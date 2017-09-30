@@ -10,7 +10,7 @@ import tensorflow as tf
 import tf_ops as tops
 
 
-class BaseModelParams(object):
+class BaseNetworkParams(object):
     """
     Parse the model params opts passed in as kwargs.
 
@@ -121,7 +121,7 @@ class BaseNetwork(object):
     # pylint: disable=too-many-instance-attributes
 
 
-    PARAM_CLASS = BaseModelParams
+    PARAM_CLASS = BaseNetworkParams
 
     def setup_layers(self, params):
         """Build all the model layers

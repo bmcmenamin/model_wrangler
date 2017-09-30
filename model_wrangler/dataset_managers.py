@@ -1,4 +1,5 @@
 """
+This module has the tools that do dataset management
 """
 
 import sys
@@ -27,9 +28,10 @@ def random_chunk_generator(iterable, block_size):
     return zip_longest(*args, fillvalue=None)
 
 def pad_list(in_list, pad_size):
-    """Make a list a little longer by appending a random sample
     """
-
+    Make a list a little longer by appending a randomly sampled
+    items from itselt
+    """
     new_list = in_list.copy()
     pad_values = np.random.choice(in_list, pad_size, replace=True)
     new_list.extend(pad_values)
@@ -87,7 +89,8 @@ def flatten_lists(list_of_lists):
 
 class DatasetManager(object):
     """
-    Divide a dataset into training batchs
+    Load a dataset and manage how sample holdout and how samples are batch'd
+    for model training
 
     Initialize with arrays:
      `X` is num_samples by input_dimension
@@ -137,26 +140,22 @@ class DatasetManager(object):
         logging.info('Num holdout samples %d', len(self.nsamp_holdout))
 
 
-
     def get_holdout_samples(self):
-        """Return holdout data
+        """Return the holdout data
         """
         all_idx = flatten_lists(self.groups_holdout.values)
         return self.X[all_idx, :], self.y[all_idx]
 
     def random_batches(self, batch_size=256):
+        """Generate random batches of size`batch_size`
         """
-        Generate batches of data with `batch_size` random samples in each
-        """
-
         all_idx = flatten_lists(self.groups.values)
 
         for batch_idx in random_chunk_generator(all_idx, batch_size):
             yield self.X[batch_idx, :], self.y[batch_idx]
 
     def stratified_batches(self, batch_size=256):
-        """
-        Generate batches with proporional number of samples per group in each batch
+        """Generate batches with stratified sampling of groups
         """
 
         num_batches = self.nsamp_train // batch_size
@@ -175,7 +174,8 @@ class DatasetManager(object):
     def balanced_batches(self, pos_classes, batch_size=256):
         """
         Generate batches where the groups listed in `pos_classes` occur with the
-        same frequency as all other classes combined.
+        same frequency as all other classes combined. Useful in the case of 
+        class imbalances.
         """
 
         pos_samples = []

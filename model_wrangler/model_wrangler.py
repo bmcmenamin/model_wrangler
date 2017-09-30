@@ -1,8 +1,6 @@
-"""
-Module implements the base class for tensorflow models, TfModel
+"""Module implements the ModelWrangler object
 """
 
-import os
 import logging
 import json
 
@@ -12,93 +10,25 @@ import tensorflow as tf
 from tf_models import BaseNetwork
 from dataset_managers import DatasetManager
 
-class ModelParams(object):
-    """Parse the model params opts passed in as kwargs
-    """
-
-    # all params are stored as attributes, so we need pylint to
-    # shut up about having too many instance attributes.
-    #
-    # pylint: disable=too-many-instance-attributes
-
-    def __init__(self, kwargs):
-
-        self.verb = kwargs.get('verb', True)
-        self.name = kwargs.get('name', 'newmodel')
-        self.path = kwargs.get(
-            'path',
-            os.path.join(os.path.curdir, self.name)
-        )
-
-        logging.basicConfig(
-            filename=os.path.join(self.path, '{}.log'.format(self.name)),
-            level=logging.INFO)
-
-        # model params
-        self.in_size = kwargs.get('in_size', 10)
-        self.out_size = kwargs.get('out_size', 3)
-
-        # training params
-        self.max_iter = kwargs.get('max_iter', 500)
-        self.batch_size = kwargs.get('batch_size', 250)
-        self.num_epoch = kwargs.get('num_epoch', 2)
-
-    def init_save_dir(self):
-        """Initialize save dir
-        """
-        logging.info('Save directory : %s', self.path)
-
-        try:
-            os.makedirs(self.path)
-        except OSError:
-            logging.warn('Save directory already exists')
-
-    def find_metagraph(self):
-        """Find the most recent meta file with this model
-        """
-        meta_list = os.path.join(self.path, '*.meta')
-        newest_meta_file = max(meta_list, key=os.path.getctime)
-        return newest_meta_file
-
-    def save(self):
-        """save model params to JSON
-        """
-
-        self.init_save_dir()
-
-        params_fname = os.path.join(
-            self.path,
-            '-'.join([self.name, 'params.json'])
-            )
-        logging.info('Saving parameter file %s', params_fname)
-
-        with open(params_fname, 'wt') as json_file:
-            json.dump(
-                vars(self),
-                json_file,
-                ensure_ascii=True,
-                indent=4)
-
-
 class ModelWrangler(object):
     """
 
     Loads a model (Default is `BaseModel`) and wraps it with a bunch of helpful
-    functions:
+    methods:
 
-        - `save` save tf model to disk
-        - `restore` bring a trained model back from the dead (i.e. load from disk)
+        `save`: save tf model to disk
+        `restore`: bring a trained model back from the dead (i.e. load from disk)
 
-        - `predict` get model activations for a given input        
-        - `score` get model model loss for a set of inputs and target outputs
-        - `feature_importance` estimate feature importance by looking at error
+        `predict`: get model activations for a given input        
+        `score`: get model model loss for a set of inputs and target outputs
+        `feature_importance`: estimate feature importance by looking at error
             gradients for a set of inputs and target outputs
     """
 
     def __init__(self, model_type=BaseNetwork, **kwargs):
         """Initialize a tensorflow model
         """
-        self.params = ModelParams(kwargs)
+        self.params = BaseNetwork.PARAM_CLASS(kwargs)
         self.tf_mod = model_type(self.params)
 
     def save(self, iteration):

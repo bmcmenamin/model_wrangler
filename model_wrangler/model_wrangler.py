@@ -8,7 +8,6 @@ import numpy as np
 import tensorflow as tf
 
 from tf_models import BaseNetwork
-from dataset_managers import DatasetManager
 
 class ModelWrangler(object):
     """
@@ -168,7 +167,7 @@ class ModelWrangler(object):
         on the model using a bunch of input_x, target_y
         """
 
-        dataset = DatasetManager(
+        dataset = self.DATA_CLASS(
             input_x, target_y,
             categorical=True, holdout_prop=0.1
         )

@@ -8,7 +8,7 @@ import json
 import tensorflow as tf
 
 import tf_ops as tops
-
+import dataset_managers as dm
 
 class BaseNetworkParams(object):
     """
@@ -122,6 +122,7 @@ class BaseNetwork(object):
 
 
     PARAM_CLASS = BaseNetworkParams
+    DATA_CLASS = dm.DatasetManager
 
     def setup_layers(self, params):
         """Build all the model layers

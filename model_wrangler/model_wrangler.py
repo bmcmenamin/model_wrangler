@@ -3,7 +3,6 @@
 import os
 import logging
 import json
-from multiprocessing import cpu_count
 
 import numpy as np
 import tensorflow as tf
@@ -33,7 +32,7 @@ class ModelWrangler(object):
         )
         return sess
 
-    def initialize_model(self):
+    def initialize(self):
         """Initialize model weights
         """
         initializer = tf.variables_initializer(
@@ -49,14 +48,11 @@ class ModelWrangler(object):
         """Initialize a tensorflow model
         """
 
-        self.session_params = tops.set_max_threads(
-            tops.set_session_params(),
-            cpu_count()
-        )
+        self.session_params = tops.set_max_threads(tops.set_session_params())
 
         self.params = model_class.PARAM_CLASS(kwargs)
         self.tf_mod = model_class(self.params)
-        self.initialize_model()
+        self.initialize()
 
     def save(self, iteration):
         """Save model parameters in a JSON and model weights in TF format
@@ -187,6 +183,11 @@ class ModelWrangler(object):
             batch_counter += 1
 
             if batch_counter % 100 == 0:
+
+                #
+                # This is where tensorboard writing should happen
+                #
+
                 logging.info('Batch number %d', batch_counter)
                 train_error = self.score(X_holdout, y_holdout)
                 logging.info("Training score: %0.6f", train_error)
@@ -197,7 +198,7 @@ class ModelWrangler(object):
         on the model using a bunch of input_x, target_y
         """
 
-        dataset = self.DATA_CLASS(
+        dataset = self.tf_mod.DATA_CLASS(
             input_x, target_y,
             categorical=True, holdout_prop=0.1
         )
@@ -211,3 +212,4 @@ class ModelWrangler(object):
 
         except KeyboardInterrupt:
             print('Force exiting training.')
+

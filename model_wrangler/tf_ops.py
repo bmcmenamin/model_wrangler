@@ -1,5 +1,6 @@
 """Module contains common tensorflow operations
 """
+from multiprocessing import cpu_count
 import tensorflow as tf
 
 #
@@ -11,13 +12,18 @@ def set_session_params(cfg_params=None):
     """
     return tf.CongigProto(**cfg_params)
 
-def set_max_threads(sess_cfg, max_threads):
+def set_max_threads(sess_cfg, max_threads=None):
     """Set max threads used in session
     """
+
+    if max_threads is None:
+        mas_threads = cpu_count()
+
     sess_cfg.intra_op_parallelism_threads = max_threads
     sess_cfg.inter_op_parallelism_threads = max_threads
     sess_cfg.allow_soft_placement = True
     return sess_cfg
+
 
 #
 # Loss functions

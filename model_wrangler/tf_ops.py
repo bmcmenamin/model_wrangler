@@ -2,6 +2,27 @@
 """
 import tensorflow as tf
 
+#
+# Session config functions
+#
+
+def set_session_params(cfg_params=None):
+    """Set session configuration. Use this to switch between CPU and GPU tasks
+    """
+    return tf.CongigProto(**cfg_params)
+
+def set_max_threads(sess_cfg, max_threads):
+    """Set max threads used in session
+    """
+    sess_cfg.intra_op_parallelism_threads = max_threads
+    sess_cfg.inter_op_parallelism_threads = max_threads
+    sess_cfg.allow_soft_placement = True
+    return sess_cfg
+
+#
+# Loss functions
+#
+
 def layer_logits(layer, pad=1.0e-8):
     """convert probabilities to logits"""
 
@@ -13,12 +34,6 @@ def layer_logits(layer, pad=1.0e-8):
 
     pad_layer = (1 - 2*pad) * layer + pad
     return tf.log(pad_layer)
-
-
-
-#
-# Loss functions
-#
 
 def _loss(function, observed, actual):
     """Calculate loss with arbitrary loss func

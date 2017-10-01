@@ -10,6 +10,18 @@ import tensorflow as tf
 import tf_ops as tops
 import dataset_managers as dm
 
+
+def make_dir(path):
+    """Initialize directory
+    """
+    logging.info('Save directory : %s', path)
+
+    try:
+        os.makedirs(path)
+    except OSError:
+        logging.info('Directory %s already exists', path)
+
+
 class BaseNetworkParams(object):
     """
     Parse the model params opts passed in as kwargs.
@@ -58,34 +70,15 @@ class BaseNetworkParams(object):
         for attr in self.MODEL_SPECIFIC_ATTRIBUTES:
             setattr(self, attr, kwargs.get(attr, self.MODEL_SPECIFIC_ATTRIBUTES[attr]))
 
-
         logging.basicConfig(
             filename=os.path.join(self.path, '{}.log'.format(self.name)),
             level=logging.INFO)
-
-
-    def init_save_dir(self):
-        """Initialize save dir
-        """
-        logging.info('Save directory : %s', self.path)
-
-        try:
-            os.makedirs(self.path)
-        except OSError:
-            logging.warn('Save directory already exists')
-
-    def find_metagraph(self):
-        """Find the most recent meta file with this model
-        """
-        meta_list = os.path.join(self.path, '*.meta')
-        newest_meta_file = max(meta_list, key=os.path.getctime)
-        return newest_meta_file
 
     def save(self):
         """save model params to JSON
         """
 
-        self.init_save_dir()
+        make_dir(self.path)
 
         params_fname = os.path.join(
             self.path,

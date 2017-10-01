@@ -1,6 +1,6 @@
 """Module implements the ModelWrangler object
 """
-
+import os
 import logging
 import json
 from multiprocessing import cpu_count
@@ -8,14 +8,13 @@ from multiprocessing import cpu_count
 import numpy as np
 import tensorflow as tf
 
+import tf_ops as tops
 from tf_models import BaseNetwork
+
 
 class ModelWrangler(object):
     """
-
-    Loads a model (Default is `BaseModel`) and wraps it with a bunch of helpful
-    methods:
-
+    Loads a model class that you've defined and wraps it with a bunch of helpful methods:
         `save`: save tf model to disk
         `restore`: bring a trained model back from the dead (i.e. load from disk)
 
@@ -24,18 +23,6 @@ class ModelWrangler(object):
         `feature_importance`: estimate feature importance by looking at error
             gradients for a set of inputs and target outputs
     """
-
-    def set_session_params(self, cfg_params=None):
-        """Set session configuration. Use this to switch between CPU and GPU tasks
-        """
-        self.session_params = tf.CongigProto(**cfg_params)
-
-    def set_max_threads(self, max_threads):
-        """Set max threads used in session
-        """
-        self.session_params.intra_op_parallelism_threads = max_threads
-        self.session_params.inter_op_parallelism_threads = max_threads
-        self.session_params.allow_soft_placement = True
 
     def new_session(self):
         """Make Tensorflow session
@@ -46,7 +33,7 @@ class ModelWrangler(object):
         )
         return sess
 
-    def initialize_weights(self):
+    def initialize_model(self):
         """Initialize model weights
         """
         initializer = tf.variables_initializer(
@@ -61,13 +48,15 @@ class ModelWrangler(object):
     def __init__(self, model_class=BaseNetwork, **kwargs):
         """Initialize a tensorflow model
         """
-        self.session_params = None
-        set_max_threads(cpu_count())
+
+        self.session_params = tops.set_max_threads(
+            tops.set_session_params(),
+            cpu_count()
+        )
 
         self.params = model_class.PARAM_CLASS(kwargs)
         self.tf_mod = model_class(self.params)
-        self.initialize_weights()
-
+        self.initialize_model()
 
     def save(self, iteration):
         """Save model parameters in a JSON and model weights in TF format
@@ -76,7 +65,7 @@ class ModelWrangler(object):
         self.params.save()
 
         logging.info('Saving weights file in %s', self.params.path)
-        with self.make_session() as sess:
+        with self.new_session() as sess:
             self.tf_mod.saver.save(
                 sess,
                 save_path=self.params.path,
@@ -95,8 +84,10 @@ class ModelWrangler(object):
         # initialize a new model, restore its weights
         new_model = cls(**params)
 
-        # restore weights
-        new_model.tf_mod.saver = tf.train.import_meta_graph(new_model.params.find_metagraph())
+        meta_list = os.path.join(new_model.params.path, '*.meta')
+        newest_meta_file = max(meta_list, key=os.path.getctime)
+        new_model.tf_mod.saver = tf.train.import_meta_graph(newest_meta_file)
+
         last_checkpoint = tf.train.latest_checkpoint(new_model.params.path)
 
         with new_model.new_session() as sess:

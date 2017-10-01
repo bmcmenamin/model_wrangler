@@ -10,6 +10,7 @@ import tensorflow as tf
 import tf_ops as tops
 from tf_models import BaseNetwork
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 class ModelWrangler(object):
     """
@@ -22,6 +23,9 @@ class ModelWrangler(object):
         `feature_importance`: estimate feature importance by looking at error
             gradients for a set of inputs and target outputs
     """
+
+    def __del__(self):
+        self.sess.close()
 
     def new_session(self):
         """Make Tensorflow session
@@ -41,17 +45,15 @@ class ModelWrangler(object):
                 )
             )
 
-        with self.new_session() as sess:
-            sess.run(initializer)
+        self.sess.run(initializer)
 
     def __init__(self, model_class=BaseNetwork, **kwargs):
         """Initialize a tensorflow model
         """
-
         self.session_params = tops.set_max_threads(tops.set_session_params())
-
         self.params = model_class.PARAM_CLASS(kwargs)
         self.tf_mod = model_class(self.params)
+        self.sess = self.new_session()
         self.initialize()
 
     def save(self, iteration):
@@ -61,12 +63,11 @@ class ModelWrangler(object):
         self.params.save()
 
         logging.info('Saving weights file in %s', self.params.path)
-        with self.new_session() as sess:
-            self.tf_mod.saver.save(
-                sess,
-                save_path=self.params.path,
-                global_step=iteration,
-            )
+        self.tf_mod.saver.save(
+            self.sess,
+            save_path=self.params.path,
+            global_step=iteration,
+        )
 
     @classmethod
     def load(cls, param_file):
@@ -80,14 +81,13 @@ class ModelWrangler(object):
         # initialize a new model, restore its weights
         new_model = cls(**params)
 
-        meta_list = os.path.join(new_model.params.path, '*.meta')
-        newest_meta_file = max(meta_list, key=os.path.getctime)
-        new_model.tf_mod.saver = tf.train.import_meta_graph(newest_meta_file)
+        #meta_list = os.path.join(new_model.params.path, '*.meta')
+        #newest_meta_file = max(meta_list, key=os.path.getctime)
+        #new_model.tf_mod.saver = tf.train.import_meta_graph(newest_meta_file)
 
+        new_model.tf_mod.saver = tf.train.import_meta_graph(params.meta_filename)
         last_checkpoint = tf.train.latest_checkpoint(new_model.params.path)
-
-        with new_model.new_session() as sess:
-            new_model.tf_mod.saver.restore(sess, last_checkpoint)
+        new_model.tf_mod.saver.restore(new_model.sess, last_checkpoint)
 
         return new_model
 
@@ -100,8 +100,7 @@ class ModelWrangler(object):
             self.tf_mod.is_training: False
         }
 
-        with self.new_session() as sess:
-            vals = sess.run(self.tf_mod.output, feed_dict=data_dict)
+        vals = self.sess.run(self.tf_mod.output, feed_dict=data_dict)
 
         return vals
 
@@ -121,8 +120,7 @@ class ModelWrangler(object):
         if score_func is None:
             score_func = self.tf_mod.loss
 
-        with self.new_session() as sess:
-            val = score_func.eval(feed_dict=data_dict, session=sess)
+        val = score_func.eval(feed_dict=data_dict, session=self.sess)
 
         return val
 
@@ -146,11 +144,10 @@ class ModelWrangler(object):
             self.tf_mod.input
         )
 
-        with self.new_session() as sess:
-            grad_wrt_input_vals = sess.run(
-                grad_wrt_input,
-                feed_dict=data_dict
-            )[feature_layer_idx]
+        grad_wrt_input_vals = self.sess.run(
+            grad_wrt_input,
+            feed_dict=data_dict
+        )[feature_layer_idx]
 
         importance = np.mean(grad_wrt_input_vals**2, axis=0, keepdims=True)
 
@@ -160,8 +157,8 @@ class ModelWrangler(object):
     def _run_epoch(self, sess, dataset, pos_classes):
         """Run an epoch of training
         """
-        batch_iterator = dataset.balanced_batches(
-            pos_classes,
+        batch_iterator = dataset.get_batches(
+            pos_classes=pos_classes,
             batch_size=self.params.batch_size
         )
 
@@ -180,19 +177,23 @@ class ModelWrangler(object):
                 feed_dict=data_dict
             )
 
+            if (batch_counter % 100) == 0:
+
+                # Write training stats to tensorboard
+                self.tf_mod.tb_writer.add_summary(
+                    sess.run(self.tf_mod.tb_stats, feed_dict=data_dict),
+                    batch_counter
+                )
+
+                # logging elsewhere
+                train_error = self.score(X_batch, y_batch)
+                holdout_error = self.score(X_holdout, y_holdout)
+                logging.info("Batch %d: Training score = %0.6f", batch_counter, train_error)
+                logging.info("Batch %d: Holdout score = %0.6f", batch_counter, holdout_error)
+
             batch_counter += 1
 
-            if batch_counter % 100 == 0:
-
-                #
-                # This is where tensorboard writing should happen
-                #
-
-                logging.info('Batch number %d', batch_counter)
-                train_error = self.score(X_holdout, y_holdout)
-                logging.info("Training score: %0.6f", train_error)
-
-    def train(self, input_x, target_y, pos_classes):
+    def train(self, input_x, target_y, pos_classes=None):
         """
         Run a a bunch of training batches
         on the model using a bunch of input_x, target_y
@@ -200,16 +201,30 @@ class ModelWrangler(object):
 
         dataset = self.tf_mod.DATA_CLASS(
             input_x, target_y,
-            categorical=True, holdout_prop=0.1
-        )
+            holdout_prop=self.params.holdout_prop)
 
         try:
-            with self.new_session() as sess:
-                for epoch in range(self.params.num_epoch):
-                    logging.info('Starting Epoch %d', epoch)
-                    self._run_epoch(sess, dataset, pos_classes)
-                    self.save(epoch)
+            for epoch in range(self.params.num_epochs):
+                logging.info('Starting Epoch %d', epoch)
+                self._run_epoch(self.sess, dataset, pos_classes)
+                self.save(epoch)
 
         except KeyboardInterrupt:
             print('Force exiting training.')
+
+    def get_from_model(self, name_to_find):
+        """Return a piece of the model by it's name
+        """
+        if name_to_find not in self.tf_mod.graph._names_in_use:
+            raise KeyError('`{}` not in this model'.format(name_to_find))
+
+        ops_list = [i.name for i in self.tf_mod.graph.get_operations()]
+        if name_to_find in ops_list:
+            tensor_item = self.tf_mod.graph.get_tensor_by_name('{}:0'.format(name_to_find))
+        else:
+            tensor_item = self.tf_mod.graph.get_tensor_by_name(name_to_find)
+
+        value_item = self.sess.run(tensor_item)
+        return value_item
+
 

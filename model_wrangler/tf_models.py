@@ -4,6 +4,7 @@ Module contains tensorflow model definitions
 import os
 import logging
 import json
+import pprint
 
 import tensorflow as tf
 
@@ -45,8 +46,12 @@ class BaseNetworkParams(object):
         'verb': True,
         'name': 'newmodel',
         'path': '',
+        'meta_filename': '',
+        'tb_log_path': '',
         'batch_size': 256,
         'num_epochs': 3,
+        'holdout_prop': 0.1,
+        'learning_rate': 0.0001
     }
 
     # default values for model-specific attributes
@@ -55,6 +60,12 @@ class BaseNetworkParams(object):
         'out_size': 3,
         'max_iter': 500,
     }
+
+    def __str__(self):
+        return pprint.pformat(vars(self), indent=4)
+
+    def __repr__(self):
+        return self.__str__()
 
     def __init__(self, kwargs):
 
@@ -65,11 +76,14 @@ class BaseNetworkParams(object):
         # path is required, but doesn't have a simple default so we specify it
         # here at the time the model is initialized and 'name' has been set
         self.path = kwargs.get('path', os.path.join(os.path.curdir, self.name))
+        self.meta_filename = os.path.join(self.path, 'saver-meta')
+        self.tb_log_path = os.path.join(self.path, 'tb_log')
 
         # Set model-specific attributes from kwargs or defaults
         for attr in self.MODEL_SPECIFIC_ATTRIBUTES:
             setattr(self, attr, kwargs.get(attr, self.MODEL_SPECIFIC_ATTRIBUTES[attr]))
 
+        make_dir(self.path)
         logging.basicConfig(
             filename=os.path.join(self.path, '{}.log'.format(self.name)),
             level=logging.INFO)
@@ -101,7 +115,7 @@ class BaseNetwork(object):
 
     Your subclass should redefine the following methods:
         - `setup_layers` should build the whole model
-        - `setup_training` define loss function and training step
+        - `setup_training` define training step
 
     And change the variable `PARAM_CLASS` to point to an approriate
 
@@ -137,20 +151,31 @@ class BaseNetwork(object):
             shape=[None, params.out_size]
             )
 
-        return in_layer, out_layer, target_layer
+        loss = tops.loss_sigmoid_ce(target_layer, in_layer)
 
-    def setup_training(self):
+        return in_layer, out_layer, target_layer, loss
+
+    def setup_training(self, learning_rate):
         """Set up loss and training step
         """
 
-        loss = tops.loss_sigmoid_ce(self.target, self.output)
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+        #optimizer = tf.train.MomentumOptimizer(learning_rate, 0.9)
+        #optimizer = tf.train.AdamOptimizer(learning_rate)
+        #optimizer = tf.train.AdadeltaOptimizer(learning_rate=learning_rate, rho=0.9)
 
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-        optimizer = tf.train.AdamOptimizer(epsilon=1.0e-4)
         with tf.control_dependencies(update_ops):
             train_step = optimizer.minimize(self.loss)
 
-        return loss, train_step
+        return train_step
+
+    def setup_tensorboard_tracking(self, tb_log_path):
+        """Set up summary stats to track in tensorboard
+        """
+        tf.summary.scalar('training_loss', self.loss)
+        tb_writer = tf.summary.FileWriter(tb_log_path, self.graph)
+        return tb_writer
 
     def __init__(self, params):
         """Initialize a tensorflow model
@@ -160,11 +185,15 @@ class BaseNetwork(object):
 
         with self.graph.as_default():
             self.is_training = tf.placeholder("bool", name="is_training")
-            self.input, self.output, self.target = self.setup_layers(params)
-            self.loss, self.train_step = self.setup_training()
+            self.input, self.output, self.target, self.loss = self.setup_layers(params)
+            self.train_step = self.setup_training(params.learning_rate)
+
+            self.tb_writer = self.setup_tensorboard_tracking(params.tb_log_path)
+            self.tb_stats  = tf.summary.merge_all()
 
             self.saver = tf.train.Saver(
                 name=params.name,
+                filename=params.meta_filename,
                 pad_step_number=True,
                 max_to_keep=4
                 )

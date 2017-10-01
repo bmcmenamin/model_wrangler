@@ -3,6 +3,7 @@
 
 import logging
 import json
+from multiprocessing import cpu_count
 
 import numpy as np
 import tensorflow as tf
@@ -24,11 +25,49 @@ class ModelWrangler(object):
             gradients for a set of inputs and target outputs
     """
 
+    def set_session_params(self, cfg_params=None):
+        """Set session configuration. Use this to switch between CPU and GPU tasks
+        """
+        self.session_params = tf.CongigProto(**cfg_params)
+
+    def set_max_threads(self, max_threads):
+        """Set max threads used in session
+        """
+        self.session_params.intra_op_parallelism_threads = max_threads
+        self.session_params.inter_op_parallelism_threads = max_threads
+        self.session_params.allow_soft_placement = True
+
+    def new_session(self):
+        """Make Tensorflow session
+        """
+        sess = tf.Session(
+            graph=self.tf_mod.graph,
+            config=self.session_params
+        )
+        return sess
+
+    def initialize_weights(self):
+        """Initialize model weights
+        """
+        initializer = tf.variables_initializer(
+            self.tf_mod.graph.get_collection(
+                tf.GraphKeys.GLOBAL_VARIABLES
+                )
+            )
+
+        with self.new_session() as sess:
+            sess.run(initializer)
+
     def __init__(self, model_class=BaseNetwork, **kwargs):
         """Initialize a tensorflow model
         """
+        self.session_params = None
+        set_max_threads(cpu_count())
+
         self.params = model_class.PARAM_CLASS(kwargs)
         self.tf_mod = model_class(self.params)
+        self.initialize_weights()
+
 
     def save(self, iteration):
         """Save model parameters in a JSON and model weights in TF format
@@ -37,7 +76,7 @@ class ModelWrangler(object):
         self.params.save()
 
         logging.info('Saving weights file in %s', self.params.path)
-        with tf.Session(graph=self.tf_mod.graph) as sess:
+        with self.make_session() as sess:
             self.tf_mod.saver.save(
                 sess,
                 save_path=self.params.path,
@@ -60,7 +99,7 @@ class ModelWrangler(object):
         new_model.tf_mod.saver = tf.train.import_meta_graph(new_model.params.find_metagraph())
         last_checkpoint = tf.train.latest_checkpoint(new_model.params.path)
 
-        with tf.Session(graph=new_model.tf_mod.graph) as sess:
+        with new_model.new_session() as sess:
             new_model.tf_mod.saver.restore(sess, last_checkpoint)
 
         return new_model
@@ -74,7 +113,7 @@ class ModelWrangler(object):
             self.tf_mod.is_training: False
         }
 
-        with tf.Session(graph=self.tf_mod.graph) as sess:
+        with self.new_session() as sess:
             vals = sess.run(self.tf_mod.output, feed_dict=data_dict)
 
         return vals
@@ -95,7 +134,7 @@ class ModelWrangler(object):
         if score_func is None:
             score_func = self.tf_mod.loss
 
-        with tf.Session(graph=self.tf_mod.graph) as sess:
+        with self.new_session() as sess:
             val = score_func.eval(feed_dict=data_dict, session=sess)
 
         return val
@@ -120,7 +159,7 @@ class ModelWrangler(object):
             self.tf_mod.input
         )
 
-        with tf.Session(graph=self.tf_mod.graph) as sess:
+        with self.new_session() as sess:
             grad_wrt_input_vals = sess.run(
                 grad_wrt_input,
                 feed_dict=data_dict
@@ -173,11 +212,11 @@ class ModelWrangler(object):
         )
 
         try:
-            with tf.Session(graph=self.tf_mod.graph) as sess:
+            with self.new_session() as sess:
                 for epoch in range(self.params.num_epoch):
                     logging.info('Starting Epoch %d', epoch)
                     self._run_epoch(sess, dataset, pos_classes)
                     self.save(epoch)
 
         except KeyboardInterrupt:
-            print('Force-exiting training.')
+            print('Force exiting training.')

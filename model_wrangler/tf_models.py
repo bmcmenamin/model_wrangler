@@ -44,7 +44,6 @@ class BaseNetworkParams(object):
         'max_iter': 500,
     }
 
-
     def __init__(self, kwargs):
 
         # Set required attributes from kwargs or defaults
@@ -160,18 +159,6 @@ class BaseNetwork(object):
 
         return loss, train_step
 
-    def initialize_weights(self):
-        """Initialize model weights"""
-
-        initializer = tf.variables_initializer(
-            self.graph.get_collection(
-                tf.GraphKeys.GLOBAL_VARIABLES
-                )
-            )
-
-        with tf.Session(graph=self.graph) as sess:
-            sess.run(initializer)
-
     def __init__(self, params):
         """Initialize a tensorflow model
         """
@@ -188,6 +175,4 @@ class BaseNetwork(object):
                 pad_step_number=True,
                 max_to_keep=4
                 )
-
-        self.initialize_weights()
 

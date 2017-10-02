@@ -3,16 +3,17 @@ Module sets up Linear Regression model
 """
 import tensorflow as tf
 
-import tf_ops as tops
-from tf_models import BaseNetworkParams, BaseNetwork
-from model_wrangler import ModelWrangler
+from model_wrangler.model_wrangler import ModelWrangler
+import model_wrangler.tf_ops as tops
+from model_wrangler.tf_models import BaseNetworkParams, BaseNetwork
 
-import dataset_managers as dm
+import model_wrangler.dataset_managers as dm
 
 class LogisticRegressionParams(BaseNetworkParams):
     """Linear regression defaul params
     """
     MODEL_SPECIFIC_ATTRIBUTES = {
+        'name': 'logreg',
         'in_size': 10,
         'out_size': 1,
     }
@@ -30,19 +31,19 @@ class LogisticRegressionModel(BaseNetwork):
         """Build all the model layers
         """
         in_layer = tf.placeholder(
-            "float",
+            dtype=tf.float32,
             name="input",
             shape=[None, params.in_size]
             )
 
         coeff = tf.Variable(tf.ones([params.in_size, 1]), name="coeff")
-        intercept = tf.Variable(tf.ones([1,]), name="intercept")
-        out_layer = tf.sigmoid(
-            tf.add(tf.matmul(in_layer, coeff), intercept),
-            name='output')
+        intercept = tf.Variable(tf.zeros([1,]), name="intercept")
+
+        linear_output = tf.add(tf.matmul(in_layer, coeff), intercept, name='linear_output')
+        out_layer = tf.sigmoid(linear_output, name='output')
 
         target_layer = tf.placeholder(
-            "float",
+            dtype=tf.float32,
             name="target",
             shape=[None, params.out_size]
         )
@@ -56,6 +57,7 @@ class LogisticRegression(ModelWrangler):
     """
 
     def __init__(self, in_size=10, **kwargs):
+
         super(LogisticRegression, self).__init__(
             model_class=LogisticRegressionModel,
             in_size=in_size,

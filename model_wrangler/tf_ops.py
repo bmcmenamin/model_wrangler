@@ -10,7 +10,6 @@ import tensorflow as tf
 def set_session_params(cfg_params=None):
     """Set session configuration. Use this to switch between CPU and GPU tasks
     """
-
     if cfg_params is None:
         cfg_params = {}
 
@@ -19,7 +18,6 @@ def set_session_params(cfg_params=None):
 def set_max_threads(sess_cfg, max_threads=None):
     """Set max threads used in session
     """
-
     if max_threads is None:
         max_threads = cpu_count()
 

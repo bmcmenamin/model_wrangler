@@ -52,6 +52,11 @@ class ModelWrangler(object):
         """
         self.session_params = tops.set_max_threads(tops.set_session_params())
         self.params = model_class.PARAM_CLASS(kwargs)
+
+        logging.basicConfig(
+            filename=os.path.join(self.params.path, '{}.log'.format(self.params.name)),
+            level=logging.DEBUG)
+
         self.tf_mod = model_class(self.params)
         self.sess = self.new_session()
         self.initialize()
@@ -59,13 +64,12 @@ class ModelWrangler(object):
     def save(self, iteration):
         """Save model parameters in a JSON and model weights in TF format
         """
-
         self.params.save()
 
         logging.info('Saving weights file in %s', self.params.path)
         self.tf_mod.saver.save(
             self.sess,
-            save_path=self.params.path,
+            save_path=os.path.join(self.params.path, self.params.name),
             global_step=iteration,
         )
 

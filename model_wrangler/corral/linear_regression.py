@@ -1,18 +1,19 @@
 """
 Module sets up Linear Regression model
 """
+
 import tensorflow as tf
 
-import tf_ops as tops
-from tf_models import BaseNetworkParams, BaseNetwork
-from model_wrangler import ModelWrangler
-
-import dataset_managers as dm
+from model_wrangler.model_wrangler import ModelWrangler
+import model_wrangler.tf_ops as tops
+from model_wrangler.tf_models import BaseNetworkParams, BaseNetwork
 
 class LinearRegressionParams(BaseNetworkParams):
     """Linear regression defaul params
     """
+
     MODEL_SPECIFIC_ATTRIBUTES = {
+        'name': 'linreg',
         'in_size': 10,
         'out_size': 1,
     }
@@ -35,7 +36,7 @@ class LinearRegressionModel(BaseNetwork):
             )
 
         coeff = tf.Variable(tf.ones([params.in_size, 1]), name="coeff")
-        intercept = tf.Variable(tf.ones([1,]), name="intercept")
+        intercept = tf.Variable(tf.zeros([1,]), name="intercept")
         out_layer = tf.add(tf.matmul(in_layer, coeff), intercept, name="output")
 
         target_layer = tf.placeholder(

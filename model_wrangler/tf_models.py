@@ -44,7 +44,6 @@ class BaseNetworkParams(object):
     # default values for required attributes
     REQUIRED_ATTRIBUTES = {
         'verb': True,
-        'name': 'newmodel',
         'path': '',
         'meta_filename': '',
         'tb_log_path': '',
@@ -56,6 +55,7 @@ class BaseNetworkParams(object):
 
     # default values for model-specific attributes
     MODEL_SPECIFIC_ATTRIBUTES = {
+        'name': 'newmodel',
         'in_size': 10,
         'out_size': 3,
         'max_iter': 500,
@@ -73,25 +73,23 @@ class BaseNetworkParams(object):
         for attr in self.REQUIRED_ATTRIBUTES:
             setattr(self, attr, kwargs.get(attr, self.REQUIRED_ATTRIBUTES[attr]))
 
+        # Set model-specific attributes from kwargs or defaults
+        for attr in self.MODEL_SPECIFIC_ATTRIBUTES:
+            setattr(self, attr, kwargs.get(attr, self.MODEL_SPECIFIC_ATTRIBUTES[attr]))
+
         # path is required, but doesn't have a simple default so we specify it
         # here at the time the model is initialized and 'name' has been set
         self.path = kwargs.get('path', os.path.join(os.path.curdir, self.name))
         self.meta_filename = os.path.join(self.path, 'saver-meta')
         self.tb_log_path = os.path.join(self.path, 'tb_log')
 
-        # Set model-specific attributes from kwargs or defaults
-        for attr in self.MODEL_SPECIFIC_ATTRIBUTES:
-            setattr(self, attr, kwargs.get(attr, self.MODEL_SPECIFIC_ATTRIBUTES[attr]))
-
         make_dir(self.path)
-        logging.basicConfig(
-            filename=os.path.join(self.path, '{}.log'.format(self.name)),
-            level=logging.INFO)
+        make_dir(self.tb_log_path)
+
 
     def save(self):
         """save model params to JSON
         """
-
         make_dir(self.path)
 
         params_fname = os.path.join(
@@ -189,7 +187,7 @@ class BaseNetwork(object):
             self.train_step = self.setup_training(params.learning_rate)
 
             self.tb_writer = self.setup_tensorboard_tracking(params.tb_log_path)
-            self.tb_stats  = tf.summary.merge_all()
+            self.tb_stats = tf.summary.merge_all()
 
             self.saver = tf.train.Saver(
                 name=params.name,

@@ -10,8 +10,9 @@ I'm also a big fan of Keras for simplifying complex TensorFlow operations, but I
 
 The package in `./model_wrangler` handles all that high-level model stuff. The folder `./model_wrangler/corral` is where you store the configs for specific models. I'll write better documentation later. Speaking of, here's my partial to-do list:
 * Implement models from side projects into this format
-    * DataManager for sequention/Timeseries data
+    * DataManager for sequential/Timeseries data
     * Compatability with siamese/triplet training
+
 * Documentation
-    * Set up simple toy problems as demos in a notebook
+    * Set up toy problems as demos in a notebook
 * Unit tests

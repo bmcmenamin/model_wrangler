@@ -32,8 +32,8 @@ def set_max_threads(sess_cfg, max_threads=None):
 #
 
 def layer_logits(layer, pad=1.0e-8):
-    """convert probabilities to logits"""
-
+    """convert probabilities to logits
+    """
     if pad > 0.5 or pad < 0.0:
         raise ValueError(
             'Logit pad should be in interval (0, 0.5),',
@@ -51,7 +51,6 @@ def loss_mse(observed, actual):
 def loss_sigmoid_ce(observed, actual):
     """Calculate sigmoid cross entropy loss
     """
-
     per_sample_loss = tf.nn.sigmoid_cross_entropy_with_logits(
         labels=actual,
         logits=observed
@@ -64,7 +63,6 @@ def loss_sigmoid_ce(observed, actual):
 def loss_softmax_ce(observed, actual):
     """Calculate softmax cross entropy loss
     """
-
     per_sample_loss = tf.nn.softmax_cross_entropy_with_logits(
         labels=actual,
         logits=observed
@@ -80,3 +78,4 @@ def accuracy(observed, actual):
     is_correct = tf.equal(tf.argmax(observed, 1), tf.argmax(actual, 1))
     accuracy = tf.reduce_sum(tf.cast(is_correct, tf.float32))
     return accuracy
+

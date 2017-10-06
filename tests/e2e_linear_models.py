@@ -97,8 +97,8 @@ def test_logistic_regr(in_dim=2):
 
 if __name__ == "__main__":
 
-    print("testing linear regression")
+    print("\n\ntesting linear regression")
     test_linear_regr()
 
-    print("testing logistic regression")
+    print("\n\ntesting logistic regression")
     test_logistic_regr()

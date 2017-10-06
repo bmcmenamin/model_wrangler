@@ -23,7 +23,7 @@ def make_dir(path):
         logging.info('Directory %s already exists', path)
 
 
-class BaseNetworkParams(object):
+class BaseNetworkParams(dict):
     """
     Parse the model params opts passed in as kwargs.
 
@@ -61,12 +61,6 @@ class BaseNetworkParams(object):
         'max_iter': 500,
     }
 
-    def __str__(self):
-        return pprint.pformat(vars(self), indent=4)
-
-    def __repr__(self):
-        return self.__str__()
-
     def __init__(self, kwargs):
 
         # Set required attributes from kwargs or defaults
@@ -86,7 +80,6 @@ class BaseNetworkParams(object):
         make_dir(self.path)
         make_dir(self.tb_log_path)
 
-
     def save(self):
         """save model params to JSON
         """
@@ -99,7 +92,7 @@ class BaseNetworkParams(object):
         logging.info('Saving parameter file %s', params_fname)
 
         with open(params_fname, 'wt') as json_file:
-            json.dump(
+            json.dumps(
                 vars(self),
                 json_file,
                 ensure_ascii=True,
@@ -175,6 +168,59 @@ class BaseNetwork(object):
         tb_writer = tf.summary.FileWriter(tb_log_path, self.graph)
         return tb_writer
 
+
+    def make_dense_layer(self, input_layer, num_units, label, layer_config):
+        """ Make a dense netowrk layer
+
+        activation function/actiation-regularization
+        THEN (optional) batch normalization
+        THEN (optional) dropout
+
+        """
+
+        if isinstance(layer_config, dict):
+            layer_config = LayerConfig(layer_config)
+
+        assert isinstance(layer_config, LayerConfig)
+
+        name_stack = [label]
+        layer_stack = [
+            tf.layers.dense(
+                input_layer,
+                num_units,
+                activation=getattr(tf.nn, layer_config.activation, None),
+                use_bias=layer_config.bias,
+                activity_regularizer=layer_config.act_reg,
+                name='_'.join(name_stack)
+            )
+        ]
+
+        # adding batch normalization
+        if layer_config.batchnorm:
+            name_stack.append('batchnorm')
+            layer_stack.append(
+                tf.layers.batch_normalization(
+                    layer_stack[-1],
+                    training=self.is_training,
+                    name='_'.join(name_stack)
+                )
+            )
+
+        # adding dropout
+        if layer_config.dropout_rate:
+            name_stack.append('dropout')
+            layer_stack.append(
+                tf.layers.dropout(
+                    layer_stack[-1],
+                    rate=layer_config.dropout_rate,
+                    training=self.is_training,
+                    name='_'.join(name_stack)
+                )
+            )
+
+        return layer_stack[-1]
+
+
     def __init__(self, params):
         """Initialize a tensorflow model
         """
@@ -195,4 +241,35 @@ class BaseNetwork(object):
                 pad_step_number=True,
                 max_to_keep=4
                 )
+
+
+
+class LayerConfig(dict):
+    """Make an object thta stores layer parameters
+        for easy access using dot notation
+    """
+
+    def __init__(
+            self, activation='relu', batchnorm=True,
+            act_reg=None, dropout_rate=0.1, bias=True,
+            **layer_kws):
+
+        self.activation = str(activation)
+        self.batchnorm = batchnorm
+
+        self.act_reg = act_reg
+        self.dropout_rate = dropout_rate
+        self.bias = bias
+        self.layer_kws = layer_kws
+
+
+class ConvLayerConfig(LayerConfig):
+    """Make an object thta stores layer parameters
+        for a convonulational layer
+    """
+    def __init__(self, kernel_size=(5, 5), stride=(3, 3), **param_dict):
+        super(ConvLayerConfig, self).__init__(**param_dict)
+        self.kernel_size = kernel_size
+        self.stride = stride
+
 

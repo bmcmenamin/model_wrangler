@@ -231,4 +231,3 @@ class ModelWrangler(object):
         value_item = self.sess.run(tensor_item)
         return value_item
 
-

@@ -12,4 +12,4 @@ Current models:
 Future models:
 * autoencoders
 * conv nets
-* and more
+* and more. stay tuned.

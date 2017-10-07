@@ -25,7 +25,10 @@ class ModelWrangler(object):
     """
 
     def __del__(self):
-        self.sess.close()
+        try:
+            self.sess.close()
+        except AttributeError:
+            pass
 
     def new_session(self):
         """Make Tensorflow session
@@ -51,7 +54,7 @@ class ModelWrangler(object):
         """Initialize a tensorflow model
         """
         self.session_params = tops.set_max_threads(tops.set_session_params())
-        self.params = model_class.PARAM_CLASS(kwargs)
+        self.params = model_class.PARAM_CLASS(**kwargs)
 
         logging.basicConfig(
             filename=os.path.join(self.params.path, '{}.log'.format(self.params.name)),

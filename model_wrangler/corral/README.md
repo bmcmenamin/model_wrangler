@@ -8,8 +8,11 @@ Each of the py files here defines a class for a type of model (e.g., Linear Regr
 Current models:
 * `linear_regression`: Linear Regression
 * `logistic_regression`: Logistic Regression
+* `dense_autoencoder`: Is an autoencoder built with densely connected layers
+* `convolutional_autoencoder`: Is an autoencoder built with convolutional connected layers
 
 Future models:
-* autoencoders
-* conv nets
-* and more. stay tuned.
+* general dense NN
+* general conv NN
+* siamese training?
+* recurrent nets

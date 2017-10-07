@@ -6,22 +6,25 @@ import tensorflow as tf
 
 from model_wrangler.model_wrangler import ModelWrangler
 import model_wrangler.tf_ops as tops
-from model_wrangler.tf_models import BaseNetworkParams, BaseNetwork, LayerConfig
+from model_wrangler.tf_models import BaseNetworkParams, BaseNetwork
 
 class DenseAutoencoderParams(BaseNetworkParams):
     """Dense autoencoder params
     """
-
     MODEL_SPECIFIC_ATTRIBUTES = {
-        'name': 'autoenc',
-        'in_size': 10,
-        'encode_nodes': [5, 5],
-        'encode_params': LayerConfig(),
-        'decode_nodes': [5, 5],
-        'decode_params': LayerConfig(dropout_rate=None),
-        'bottleneck_dim': 3,
-        'bottleneck_params': LayerConfig(dropout_rate=None),
-        'output_params': LayerConfig(activation=None),
+        "name": "autoenc",
+        "in_size": 10,
+        "encode_nodes": [5, 5],
+        "encode_params": {},
+        "decode_nodes": [5, 5],
+        "decode_params": {"dropout_rate": None},
+        "bottleneck_dim": 3,
+        "bottleneck_params": {"dropout_rate": None},
+        "output_params": {
+            "dropout_rate": None,
+            "activation": None,
+            "act_reg": None
+        },
     }
 
 
@@ -85,7 +88,7 @@ class DenseAutoencoderModel(BaseNetwork):
             decode_layers[-1],
             params.in_size,
             'output_layer',
-            params.decode_params
+            params.output_params
             )
 
         target_layer = tf.placeholder(
@@ -99,11 +102,9 @@ class DenseAutoencoderModel(BaseNetwork):
         return in_layer, out_layer, target_layer, loss
 
 
-
 class DenseAutoencoder(ModelWrangler):
     """Dense Autoencoder
     """
-
     def __init__(self, in_size=10, **kwargs):
         super(DenseAutoencoder, self).__init__(
             model_class=DenseAutoencoderModel,

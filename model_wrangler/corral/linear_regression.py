@@ -11,7 +11,6 @@ from model_wrangler.tf_models import BaseNetworkParams, BaseNetwork
 class LinearRegressionParams(BaseNetworkParams):
     """Linear regression defaul params
     """
-
     MODEL_SPECIFIC_ATTRIBUTES = {
         'name': 'linreg',
         'in_size': 10,

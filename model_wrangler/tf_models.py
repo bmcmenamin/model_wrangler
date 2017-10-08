@@ -4,7 +4,6 @@ Module contains tensorflow model definitions
 import os
 import logging
 import json
-import pprint
 
 import tensorflow as tf
 
@@ -87,8 +86,13 @@ class BaseNetworkParams(dict):
         params_fname = os.path.join(self.path, '-'.join([self.name, 'params.json']))
         logging.info('Saving parameter file %s', params_fname)
 
+        dict_to_dump = vars(self)
+        for key in dict_to_dump:
+            if issubclass(dict_to_dump[key].__class__, LayerConfig):
+                dict_to_dump[key] = dict_to_dump[key].__dict__
+
         with open(params_fname, 'wt') as json_file:
-            json.dump(vars(self), json_file, indent=4)
+            json.dump(dict_to_dump, json_file, indent=4)
 
 
 class BaseNetwork(object):

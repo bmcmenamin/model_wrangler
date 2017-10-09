@@ -19,21 +19,21 @@ class ConvolutionalAutoencoderParams(BaseNetworkParams):
             dropout_rate=0.1,
             kernel=5,
             strides=2,
-            pool_size=None
+            pool_size=1
         ),
         "bottleneck_dim": 3,
         "bottleneck_params": ConvLayerConfig(
             dropout_rate=None,
             kernel=5,
             strides=2,
-            pool_size=None
+            pool_size=1
         ),
         "decode_nodes": [10, 10],
         "decode_params": ConvLayerConfig(
             dropout_rate=None,
             kernel=5,
             strides=2,
-            pool_size=None
+            pool_size=1
         ),
         "output_params": LayerConfig(
             dropout_rate=None,

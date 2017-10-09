@@ -47,7 +47,6 @@ class ModelWrangler(object):
                 tf.GraphKeys.GLOBAL_VARIABLES
                 )
             )
-
         self.sess.run(initializer)
 
     def __init__(self, model_class=BaseNetwork, **kwargs):
@@ -126,6 +125,9 @@ class ModelWrangler(object):
 
         if score_func is None:
             score_func = self.tf_mod.loss
+        else:
+            with self.tf_mod.graph.as_default():
+                score_func = score_func(self.tf_mod.output, self.tf_mod.target)
 
         val = score_func.eval(feed_dict=data_dict, session=self.sess)
 

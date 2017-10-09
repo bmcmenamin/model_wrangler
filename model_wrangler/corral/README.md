@@ -9,10 +9,12 @@ Current models:
 * `linear_regression`: Linear Regression
 * `logistic_regression`: Logistic Regression
 * `dense_autoencoder`: Is an autoencoder built with densely connected layers
-* `convolutional_autoencoder`: Is an autoencoder built with convolutional connected layers
+* `convolutional_autoencoder`: [NOT WORKING] Is an autoencoder built with convolutional connected layers
+* `dense_feedforward`: Generic densely-connected feedforward model
+
+
 
 Future models:
-* general dense NN
 * general conv NN
 * siamese training?
 * recurrent nets

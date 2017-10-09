@@ -82,7 +82,6 @@ def test_linear_regr(in_dim=2):
         LinearRegression,
         X, y)
 
-
 def test_logistic_regr(in_dim=2):
     """Compare tf logistic regression to scikit learn
     """

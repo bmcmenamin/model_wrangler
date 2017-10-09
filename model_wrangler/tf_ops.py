@@ -75,7 +75,7 @@ def loss_softmax_ce(observed, actual):
 def accuracy(observed, actual):
     """Accuracy for one-hot encoded categories
     """
-    is_correct = tf.equal(tf.argmax(observed, 1), tf.argmax(actual, 1))
-    accuracy = tf.reduce_sum(tf.cast(is_correct, tf.float32))
+    is_correct = tf.equal(tf.argmax(observed, axis=1), tf.argmax(actual, axis=1))
+    accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32))
     return accuracy
 

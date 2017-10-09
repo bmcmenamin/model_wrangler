@@ -146,8 +146,8 @@ class BaseNetwork(object):
         """Set up loss and training step
         """
 
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-        #optimizer = tf.train.MomentumOptimizer(learning_rate, 0.9)
+        #optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+        optimizer = tf.train.MomentumOptimizer(learning_rate, 0.9)
         #optimizer = tf.train.AdamOptimizer(learning_rate)
         #optimizer = tf.train.AdadeltaOptimizer(learning_rate=learning_rate, rho=0.9)
 
@@ -441,8 +441,8 @@ class ConvLayerConfig(LayerConfig):
         """Return which maxpooling method to use
         """
         if self.dim == 1:
-            return tf.layers.MaxPooling1D
+            return tf.layers.max_pooling1d
         elif self.dim == 2:
-            return tf.layers.MaxPooling2D
+            return tf.layers.max_pooling2d
         elif self.dim == 3:
-            return tf.layers.MaxPooling3D
+            return tf.layers.max_pooling3d

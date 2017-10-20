@@ -47,33 +47,37 @@ def test_conv_ae(dim=48):
 
     cae_model = ConvolutionalAutoencoder(
         in_size=dim,
-        encode_nodes=[1],
+        encode_nodes=[3],
         encode_params={
             "activation": None,
             "dropout_rate": None,
             "kernel": 3,
             "strides": 1,
-            "pool_size": 1
+            "pool_size": 3
         },
-        bottleneck_dim=1,
+        bottleneck_dim=2,
         bottleneck_params={
             "activation": None,
             "dropout_rate": None,
             "kernel": 3,
             "strides": 1,
-            "pool_size": 1
+            "pool_size": 3
         },
-        decode_nodes=[1],
+        decode_nodes=[3],
         decode_params={
+            "activation": None,
             "dropout_rate": None,
-            "kernel": 4,
+            "kernel": 3,
             "strides": 1,
-            "pool_size": 1
+            "pool_size": 3
         },
         output_params={
             "dropout_rate": None,
             "activation": None,
-            "act_reg": None
+            "act_reg": None,
+            "kernel": 1,
+            "strides": 1,
+            "pool_size": 1
         })
 
     print(cae_model.score(X, X))
@@ -82,8 +86,8 @@ def test_conv_ae(dim=48):
 
 if __name__ == "__main__":
 
-    print("\n\ntesting dense autoencoder")
-    test_dense_ae()
+    #print("\n\ntesting dense autoencoder")
+    #test_dense_ae()
 
-    #print("\n\ntesting convolutional autoencoder")
-    #test_conv_ae()
+    print("\n\ntesting convolutional autoencoder")
+    test_conv_ae()

@@ -14,31 +14,34 @@ class ConvolutionalAutoencoderParams(BaseNetworkParams):
     MODEL_SPECIFIC_ATTRIBUTES = {
         "name": "conv_autoenc",
         "in_size": 40,
-        "encode_nodes": [10, 10],
+        "encode_nodes": [10],
         "encode_params": ConvLayerConfig(
             dropout_rate=0.1,
             kernel=5,
-            strides=2,
-            pool_size=1
+            strides=1,
+            pool_size=2
         ),
         "bottleneck_dim": 3,
         "bottleneck_params": ConvLayerConfig(
             dropout_rate=None,
             kernel=5,
-            strides=2,
+            strides=1,
             pool_size=1
         ),
-        "decode_nodes": [10, 10],
+        "decode_nodes": [10],
         "decode_params": ConvLayerConfig(
             dropout_rate=None,
             kernel=5,
-            strides=2,
-            pool_size=1
+            strides=1,
+            pool_size=2
         ),
-        "output_params": LayerConfig(
+        "output_params": ConvLayerConfig(
             dropout_rate=None,
             activation=None,
-            act_reg=None
+            act_reg=None,
+            kernel=1,
+            strides=1,
+            pool_size=1
         ),
     }
 
@@ -104,9 +107,10 @@ class ConvolutionalAutoencoderModel(BaseNetwork):
             )
 
         in_layer = encode_layers[0]
-        out_layer = self.make_dense_layer(
+
+        out_layer = self.make_deconv_layer(
             decode_layers[-1],
-            params.in_size,
+            1,
             'output_layer',
             params.output_params
             )

@@ -61,6 +61,8 @@ class BaseNetworkParams(dict):
 
     def __init__(self, **kwargs):
 
+        super(dict, self).__init__()
+
         # Set required attributes from kwargs or defaults
         for attr in self.REQUIRED_ATTRIBUTES:
             setattr(self, attr, kwargs.get(attr, self.REQUIRED_ATTRIBUTES[attr]))
@@ -222,6 +224,33 @@ class BaseNetwork(object):
         )
         return pool_layer
 
+    def _make_unpool(self, input_layer, name, layer_config):
+        """Apply un-pool to a layer
+        """
+
+        if isinstance(layer_config.pool_size, int):
+            pad_size = layer_config.pool_size - 1
+        else:
+            pad_size = [i - 1 for i in layer_config.pool_size]
+
+        unpool_layer = layer_config.unpool_func()(
+            pad_size,
+            name=name
+        )(input_layer)
+
+        return unpool_layer
+
+    def _make_unstride(self, input_layer, name, layer_config):
+        """Apply un-stride to a layer
+        """
+
+        unstride_layer = layer_config.unstride_func()(
+            layer_config.strides,
+            name=name
+        )(input_layer)
+
+        return unstride_layer
+
     def make_dense_layer(self, input_layer, num_units, label, layer_config):
         """ Make a dense network layer
 
@@ -338,6 +367,22 @@ class BaseNetwork(object):
                     layer_stack[-1], '_'.join(name_stack))
             )
 
+        # adding un-pooling
+        if layer_config.pool_size:
+            name_stack.append('unpool')
+            layer_stack.append(
+                self._make_unpool(
+                    layer_stack[-1], '_'.join(name_stack), layer_config)
+            )
+
+        # adding un-striding
+        if layer_config.strides:
+            name_stack.append('unstride')
+            layer_stack.append(
+                self._make_unstride(
+                    layer_stack[-1], '_'.join(name_stack), layer_config)
+            )
+
         # adding dropout
         if layer_config.dropout_rate:
             name_stack.append('dropout')
@@ -446,3 +491,24 @@ class ConvLayerConfig(LayerConfig):
             return tf.layers.max_pooling2d
         elif self.dim == 3:
             return tf.layers.max_pooling3d
+
+    def unstride_func(self):
+        """Return which unstride method to use
+        """
+        if self.dim == 1:
+            return tf.contrib.keras.layers.UpSampling1D
+        elif self.dim == 2:
+            return tf.contrib.keras.layers.UpSampling2D
+        elif self.dim == 3:
+            return tf.contrib.keras.layers.UpSampling3D
+
+    def unpool_func(self):
+        """Return which unpool method to use
+        """
+        if self.dim == 1:
+            return tf.contrib.keras.layers.ZeroPadding1D
+        elif self.dim == 2:
+            return tf.contrib.keras.layers.ZeroPadding2D
+        elif self.dim == 3:
+            return tf.contrib.keras.layers.ZeroPadding3D
+

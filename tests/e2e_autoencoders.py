@@ -14,6 +14,8 @@ from model_wrangler.corral.dense_autoencoder import DenseAutoencoder
 from model_wrangler.tf_models import ConvLayerConfig, LayerConfig
 from model_wrangler.corral.convolutional_autoencoder import ConvolutionalAutoencoder
 
+from model_wrangler.tester import ModelTester
+
 
 def make_timeseries_testdata(in_dim=100, n_samp=1000):
     """Make sample data for linear regression
@@ -86,8 +88,14 @@ def test_conv_ae(dim=48):
 
 if __name__ == "__main__":
 
-    #print("\n\ntesting dense autoencoder")
-    #test_dense_ae()
+    print('\n\nunit testing dense autoencoder')
+    ModelTester(DenseAutoencoder)
 
-    print("\n\ntesting convolutional autoencoder")
+    print("\n\ne2e testing dense autoencoder")
+    test_dense_ae()
+
+    print('\n\nunit testing convolutional autoencoder')
+    ModelTester(ConvolutionalAutoencoder)
+
+    print("\n\ne2e testing convolutional autoencoder")
     test_conv_ae()

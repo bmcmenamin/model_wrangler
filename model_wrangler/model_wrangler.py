@@ -31,8 +31,8 @@ class ModelWrangler(object):
             pass
 
     def new_session(self):
-        """Make Tensorflow session
-        """
+        """Make Tensorflow session"""
+
         sess = tf.Session(
             graph=self.tf_mod.graph,
             config=self.session_params
@@ -40,8 +40,8 @@ class ModelWrangler(object):
         return sess
 
     def initialize(self):
-        """Initialize model weights
-        """
+        """Initialize model weights"""
+
         initializer = tf.variables_initializer(
             self.tf_mod.graph.get_collection(
                 tf.GraphKeys.GLOBAL_VARIABLES
@@ -50,8 +50,8 @@ class ModelWrangler(object):
         self.sess.run(initializer)
 
     def __init__(self, model_class=BaseNetwork, **kwargs):
-        """Initialize a tensorflow model
-        """
+        """Initialize a tensorflow model"""
+
         self.session_params = tops.set_max_threads(tops.set_session_params())
         self.params = model_class.PARAM_CLASS(**kwargs)
 
@@ -64,8 +64,8 @@ class ModelWrangler(object):
         self.initialize()
 
     def save(self, iteration):
-        """Save model parameters in a JSON and model weights in TF format
-        """
+        """Save model parameters in a JSON and model weights in TF format"""
+
         self.params.save()
 
         logging.info('Saving weights file in %s', self.params.path)
@@ -77,9 +77,7 @@ class ModelWrangler(object):
 
     @classmethod
     def load(cls, param_file):
-        """restore a saved model given the path to a paramter JSON file
-        """
-
+        """restore a saved model given the path to a paramter JSON file"""
         # load model params
         with open(param_file, 'rt') as pfile:
             params = json.load(pfile)
@@ -98,9 +96,8 @@ class ModelWrangler(object):
         return new_model
 
     def predict(self, input_x):
-        """
-        Get activations for every layer given an input matrix, input_x
-        """
+        """Get activations for every layer given an input matrix, input_x"""
+
         data_dict = {
             self.tf_mod.input: input_x,
             self.tf_mod.is_training: False
@@ -111,8 +108,7 @@ class ModelWrangler(object):
         return vals
 
     def score(self, input_x, target_y, score_func=None):
-        """
-        Measure model's current performance
+        """Measure model's current performance
         for a set of input_x and target_y using some scoring function
         `score_func` (defults to model loss function)
         """
@@ -164,8 +160,8 @@ class ModelWrangler(object):
 
 
     def _run_epoch(self, sess, dataset, pos_classes):
-        """Run an epoch of training
-        """
+        """Run an epoch of training"""
+
         batch_iterator = dataset.get_batches(
             pos_classes=pos_classes,
             batch_size=self.params.batch_size
@@ -222,8 +218,8 @@ class ModelWrangler(object):
             print('Force exiting training.')
 
     def get_from_model(self, name_to_find):
-        """Return a piece of the model by it's name
-        """
+        """Return a piece of the model by it's name"""
+
         if name_to_find not in self.tf_mod.graph._names_in_use:
             raise KeyError('`{}` not in this model'.format(name_to_find))
 

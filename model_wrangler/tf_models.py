@@ -12,8 +12,8 @@ import dataset_managers as dm
 
 
 def make_dir(path):
-    """Initialize directory
-    """
+    """Initialize directory"""
+
     logging.info('Save directory : %s', path)
 
     try:
@@ -81,8 +81,8 @@ class BaseNetworkParams(dict):
         make_dir(self.tb_log_path)
 
     def save(self):
-        """save model params to JSON
-        """
+        """save model params to JSON"""
+
         make_dir(self.path)
 
         params_fname = os.path.join(self.path, '-'.join([self.name, 'params.json']))
@@ -120,8 +120,8 @@ class BaseNetwork(object):
     DATA_CLASS = dm.DatasetManager
 
     def setup_layers(self, params):
-        """Build all the model layers
-        """
+        """Build all the model layers"""
+
         in_layer = tf.placeholder(
             "float",
             name="input",
@@ -145,8 +145,7 @@ class BaseNetwork(object):
         return in_layer, out_layer, target_layer, loss
 
     def setup_training(self, learning_rate):
-        """Set up loss and training step
-        """
+        """Set up loss and training step"""
 
         #optimizer = tf.train.GradientDescentOptimizer(learning_rate)
         optimizer = tf.train.MomentumOptimizer(learning_rate, 0.9)
@@ -160,15 +159,15 @@ class BaseNetwork(object):
         return train_step
 
     def setup_tensorboard_tracking(self, tb_log_path):
-        """Set up summary stats to track in tensorboard
-        """
+        """Set up summary stats to track in tensorboard"""
+
         tf.summary.scalar('training_loss', self.loss)
         tb_writer = tf.summary.FileWriter(tb_log_path, self.graph)
         return tb_writer
 
     def _make_batchnorm(self, input_layer, name):
-        """Wrap batchnormalization around a layer
-        """
+        """Wrap batchnormalization around a layer"""
+
         bn_layer = tf.layers.batch_normalization(
             input_layer,
             training=self.is_training,
@@ -177,8 +176,8 @@ class BaseNetwork(object):
         return bn_layer
 
     def _make_dropout(self, input_layer, name, layer_config):
-        """Wrap dropout layer around a layer
-        """
+        """Wrap dropout layer around a layer"""
+
         do_layer = tf.layers.dropout(
             input_layer,
             rate=layer_config.dropout_rate,
@@ -188,8 +187,8 @@ class BaseNetwork(object):
         return do_layer
 
     def _make_conv(self, input_layer, num_units, name, layer_config):
-        """Make convolution layer
-        """
+        """Make convolution layer"""
+
         conv_layer = layer_config.conv_func()(
             input_layer,
             num_units,
@@ -201,8 +200,8 @@ class BaseNetwork(object):
         return conv_layer
 
     def _make_deconv(self, input_layer, num_units, name, layer_config):
-        """Make deconvolution layer
-        """
+        """Make deconvolution layer"""
+
         deconv_layer = layer_config.deconv_func()(
             input_layer,
             num_units,
@@ -214,8 +213,8 @@ class BaseNetwork(object):
         return deconv_layer
 
     def _make_maxpooling(self, input_layer, name, layer_config):
-        """Apply max pooling to a layer
-        """
+        """Apply max pooling to a layer"""
+
         pool_layer = layer_config.pool_func()(
             input_layer,
             pool_size=layer_config.pool_size,
@@ -225,8 +224,7 @@ class BaseNetwork(object):
         return pool_layer
 
     def _make_unpool(self, input_layer, name, layer_config):
-        """Apply un-pool to a layer
-        """
+        """Apply un-pool to a layer"""
 
         if isinstance(layer_config.pool_size, int):
             pad_size = layer_config.pool_size - 1
@@ -241,8 +239,7 @@ class BaseNetwork(object):
         return unpool_layer
 
     def _make_unstride(self, input_layer, name, layer_config):
-        """Apply un-stride to a layer
-        """
+        """Apply un-stride to a layer"""
 
         unstride_layer = layer_config.unstride_func()(
             layer_config.strides,
@@ -394,8 +391,7 @@ class BaseNetwork(object):
         return layer_stack[-1]
 
     def __init__(self, params):
-        """Initialize a tensorflow model
-        """
+        """Initialize a tensorflow model"""
 
         self.graph = tf.Graph()
 
@@ -414,9 +410,10 @@ class BaseNetwork(object):
                 max_to_keep=4
                 )
 
+
 class LayerConfig(object):
-    """Make an object that stores layer parameters for easy access using dot notation
-    """
+    """Make an object that stores layer parameters for easy access using dot notation"""
+
     def __str__(self):
         return str(vars(self))
 
@@ -443,9 +440,10 @@ class LayerConfig(object):
     def activation_func(self):
         return getattr(tf.nn, self.activation, None)
 
+
 class ConvLayerConfig(LayerConfig):
-    """Make an object that stores layer parameters for a convonulational layer
-    """
+    """Make an object that stores layer parameters for a convonulational layer"""
+
     def __init__(self, kernel=(5, 5), strides=(1, 1), pool_size=(3, 3), **param_dict):
         super(ConvLayerConfig, self).__init__(**param_dict)
 
@@ -463,8 +461,8 @@ class ConvLayerConfig(LayerConfig):
         self.pool_size = pool_size
 
     def conv_func(self):
-        """Return which convolution method to use
-        """
+        """Return which convolution method to use"""
+
         if self.dim == 1:
             return tf.layers.conv1d
         elif self.dim == 2:
@@ -473,8 +471,8 @@ class ConvLayerConfig(LayerConfig):
             return tf.layers.conv3d
 
     def deconv_func(self):
-        """Return which deconvolution method to use
-        """
+        """Return which deconvolution method to use"""
+
         if self.dim == 1:
             return tf.layers.conv1d
         elif self.dim == 2:
@@ -483,8 +481,8 @@ class ConvLayerConfig(LayerConfig):
             return tf.layers.conv3d_transpose
 
     def pool_func(self):
-        """Return which maxpooling method to use
-        """
+        """Return which maxpooling method to use"""
+
         if self.dim == 1:
             return tf.layers.max_pooling1d
         elif self.dim == 2:
@@ -493,8 +491,8 @@ class ConvLayerConfig(LayerConfig):
             return tf.layers.max_pooling3d
 
     def unstride_func(self):
-        """Return which unstride method to use
-        """
+        """Return which unstride method to use"""
+
         if self.dim == 1:
             return tf.contrib.keras.layers.UpSampling1D
         elif self.dim == 2:
@@ -503,8 +501,8 @@ class ConvLayerConfig(LayerConfig):
             return tf.contrib.keras.layers.UpSampling3D
 
     def unpool_func(self):
-        """Return which unpool method to use
-        """
+        """Return which unpool method to use"""
+
         if self.dim == 1:
             return tf.contrib.keras.layers.ZeroPadding1D
         elif self.dim == 2:

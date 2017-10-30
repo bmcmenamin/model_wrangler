@@ -59,8 +59,8 @@ def get_groups(output_data):
     return group_to_idx
 
 def random_split_list(in_list, split_proportion):
-    """Randomly divide list into two parts
-    """
+    """Randomly divide list into two parts"""
+
     if split_proportion >= 1.0 or split_proportion < 0.0:
         raise ValueError(
             'split_proportion should be in interval (0, 1.0],',
@@ -75,8 +75,7 @@ def random_split_list(in_list, split_proportion):
     return list_0, list_1
 
 def flatten_lists(list_of_lists):
-    """Recursively flatten a list of lists
-    """
+    """Recursively flatten a list of lists"""
 
     if not isinstance(list_of_lists, Iterable):
         return [list_of_lists]
@@ -159,14 +158,14 @@ class DatasetManager(object):
             return subset_X, subset_y
 
     def get_holdout_samples(self):
-        """Return the holdout data
-        """
+        """Return the holdout data"""
+
         all_idx = flatten_lists(self.groups_holdout.values())
         return self._return_idx(all_idx)
 
     def random_batches(self, batch_size=256):
-        """Generate random batches of size`batch_size`
-        """
+        """Generate random batches of size`batch_size`"""
+
         all_idx = flatten_lists(self.groups.values())
 
         for batch_idx in random_chunk_generator(all_idx, batch_size):
@@ -174,8 +173,7 @@ class DatasetManager(object):
 
 
 class CategoricalDataManager(DatasetManager):
-    """Turn categorical data into batches
-    """
+    """Turn categorical data into batches"""
 
     def __init__(self, X, y, holdout_prop=None):
         super(CategoricalDataManager, self).__init__(
@@ -227,8 +225,7 @@ class CategoricalDataManager(DatasetManager):
             yield self._return_idx(batch_idx)
 
     def stratified_batches(self, batch_size=256):
-        """Generate batches with stratified sampling of groups
-        """
+        """Generate batches with stratified sampling of groups"""
 
         num_batches = int(np.ceil(self.nsamp_train / (1.0*batch_size)))
 
@@ -245,8 +242,7 @@ class CategoricalDataManager(DatasetManager):
 
 
 class TimeseriesDataManager(DatasetManager):
-    """Class for handling timeseries data
-    """
+    """Class for handling timeseries data"""
 
     def __init__(self, ts, holdout_prop=None):
 

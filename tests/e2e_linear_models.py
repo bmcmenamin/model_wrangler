@@ -15,6 +15,8 @@ from sklearn.linear_model import LinearRegression as sk_LinearRegression
 from model_wrangler.corral.linear_regression import LinearRegression
 from model_wrangler.corral.logistic_regression import LogisticRegression
 
+from model_wrangler.tester import ModelTester
+
 
 def make_linear_reg_testdata(in_dim=2, n_samp=1000):
     """Make sample data for linear regression
@@ -96,8 +98,16 @@ def test_logistic_regr(in_dim=2):
 
 if __name__ == "__main__":
 
-    print("\n\ntesting linear regression")
+
+    print("\n\nunit testing linear regression")
+    ModelTester(LinearRegression)
+
+    print("\n\ne2e testing linear regression")
     test_linear_regr()
 
-    print("\n\ntesting logistic regression")
+
+    print("\n\nunit testing logistic regression")
+    ModelTester(LogisticRegression)
+
+    print("\n\ne2e testing logistic regression")
     test_logistic_regr()

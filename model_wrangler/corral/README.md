@@ -2,19 +2,31 @@
 
 This is the model corral where a bunch of premade models live.
 
+Each of the .py files here defines a class for a type of model (e.g., Linear Regression).
+It should contain the following pieces:
 
-Each of the py files here defines a class for a type of model (e.g., Linear Regression) that has the guts of TensorFlow in it. That class gets passed into the ModelWrangler class, and it is suddenly give the powers of being able to save/load, batch train, predict, measure feature importance, etc.
+* A `<model_name>Params` class that inherits from `BaseNetworkParams`. Use this class to define default parameters for everything in your model by tweaking the class attribute `MODEL_SPECIFIC_ATTRIBUTES`
+
+* A `<model_name>Model` that inherits from `BaseModel`.
+    * Set the class attribute `PARAM_CLASS` equal to the class used for default parameters. Usually it'll be the `<model_name>Params` you've set up in the previous step.
+
+    * Define a method named `setup_layers` that will set up all the tensorflow layers that make up your model. It should return the following tensorflow objects: model input layer (`in_layer`), model output layer (`out_layer`), placeholder used to hold target values during training (`target_layer`), and a cost function that is minimized during training (`loss`). The `BaseModel` gives you a bunch of methods that are helpful for this, like `make_dense_layer` and `make_conv_layer`. 
+
+* A class named `<model_name>` that inherits the `ModelWrangler` class and has an __init__ method that calls the init method in `<model_name>Model`. Now you can import `<model_name>` from this python model and you'll automatically get usefull functions like:
+    * initialize
+    * train
+    * predict
+    * score
+    * feature_importance
+    * get_from_model (get activations/weights from a layer by name)
+    * save
+    * load
+
 
 Current models:
 * `linear_regression`: Linear Regression
 * `logistic_regression`: Logistic Regression
 * `dense_autoencoder`: Is an autoencoder built with densely connected layers
-* `convolutional_autoencoder`: [NOT WORKING] Is an autoencoder built with convolutional connected layers
-* `dense_feedforward`: Generic densely-connected feedforward model
-
-
-
-Future models:
-* general conv NN
-* siamese training?
-* recurrent nets
+* `convolutional_autoencoder`: Is an autoencoder built with convolutional layers
+* `dense_feedforward`: Feedforward net with all dense connections model
+* `convolutional_feedforward`: Feedforward net with convolutional layers and then dense layers

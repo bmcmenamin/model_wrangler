@@ -1,17 +1,16 @@
 # model_wrangler
 
-## warning
-This has minimal testing and is still a work in progress
-
 ## Rationale
-I have a number of side-projects using tensorflow and/or keras, and I found myself constantly re-implementing the same pieces of boring model-wrangling code -- saving/restoring weights, dividing datasets into train/test samples, etc. So I decided to make a general package or reusable network pieces that'd automate the construction of a SkLearn-like API around my tensorflow/keras models.
+I build a lot of models with tensorflow and/or keras in various side projects. Unfortunately, I end up spending most of my time writing the 'boring' parts of the models -- functions to save/restore weights, handling how we divide datasets into batches, etc. So I've made this repo which will prevent me from re-writing all the same boring chunks of code for model-wrangling and wrap my TensorFlow models in a SkLearn-esque API to simplify common operations.
 
+The package in `./model_wrangler` has the base classes that handle most of the common model operations, and `./model_wrangler/corral` has the specific model implementations you'd actually use.
 
-The package in `./model_wrangler` handles all that high-level model stuff. The folder `./model_wrangler/corral` is where you store the configs for specific models. I'll write better documentation later. Speaking of, here's my partial to-do list:
+There's more documentation in `./model_wrangler/corral` and `./model_wrangler/tests`.
 
-* Implement models from side projects into this format
+Here's my partial to-do list:
+
+* Add more documentation
+* Add functionality for timeseries data:
+    * recurrent models
     * DataManager for sequential/Timeseries data
-    * Compatability with siamese/triplet training
-
-* Documentation
-    * Set up toy problems as demos in a notebook
+* Add methods for learning embeddings (i.e., siamese/triplet training)

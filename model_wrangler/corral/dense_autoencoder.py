@@ -84,20 +84,27 @@ class DenseAutoencoderModel(BaseNetwork):
             )
 
         in_layer = encode_layers[0]
-        out_layer = self.make_dense_layer(
-            decode_layers[-1],
-            params.in_size,
-            'output_layer',
-            params.output_params
-            )
 
         target_layer = tf.placeholder(
             "float",
             name="target",
-            shape=[None, params.in_size]
+            shape=in_layer.get_shape().as_list()
         )
 
-        loss = tops.loss_mse(target_layer, out_layer)
+        out_layer = tops.fit_to_shape(
+            self.make_dense_layer(
+                decode_layers[-1],
+                params.in_size,
+                'output_layer',
+                params.output_params
+            ),
+            target_layer.get_shape().as_list()
+        )
+
+        loss = tops.loss_mse(
+            target_layer,
+            out_layer
+        )
 
         return in_layer, out_layer, target_layer, loss
 

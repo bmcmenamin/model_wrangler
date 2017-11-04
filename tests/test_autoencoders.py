@@ -37,8 +37,9 @@ def test_dense_ae(dim=24):
     ae_model = DenseAutoencoder(in_size=dim)
 
     print(ae_model.score(X, X))
-    ae_model.train(X, X)
-    print(ae_model.score(X, X))
+    for _ in range(5):
+        ae_model.train(X, X)
+        print(ae_model.score(X, X))
 
 def test_conv_ae(dim=48):
     """Test dense autoencodes
@@ -83,8 +84,9 @@ def test_conv_ae(dim=48):
         })
 
     print(cae_model.score(X, X))
-    cae_model.train(X, X)
-    print(cae_model.score(X, X))
+    for _ in range(5):
+        cae_model.train(X, X)
+        print(cae_model.score(X, X))
 
 if __name__ == "__main__":
 

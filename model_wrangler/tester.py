@@ -40,7 +40,7 @@ class ModelTester(object):
         if loss == 0:
             raise ValueError("Model error equals zero. That ain't right")
         else:
-            print("Model error not equal to 0")
+            print("Model error not equal to 0. That's a good thing.")
 
 
     def test_trainable(self, num_samples=10):
@@ -74,6 +74,6 @@ class ModelTester(object):
         if not something_changed:
             raise ValueError("No traininble variables changed after training. That ain't right.")
         else:
-            print("Things in the model changed after training.")
+            print("Things in the model changed after training. That's a good thing.")
 
 

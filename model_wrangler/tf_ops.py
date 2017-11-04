@@ -79,3 +79,43 @@ def accuracy(observed, actual):
     accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32))
     return accuracy
 
+#
+# Layer Utils
+#
+
+def fit_to_shape(in_layer, target_shape):
+    """Use 0-padding and cropping to make a layer conform to the
+    size of a different layer.
+
+    This assumes that the first dimension is batch size and doesn't
+    need to be changed.
+    """
+    current_shape = in_layer.get_shape().as_list()
+
+    # Padding with zeroes
+    pad_params = [[0, 0]]
+    for dim in zip(current_shape[1:], target_shape[1:]):
+        if dim[0] < dim[1]:
+            err_tot = dim[1] - dim[0]
+            pad_top = err_tot // 2
+            pad_bot = err_tot - pad_top
+            pad_params.append([pad_top, pad_bot])
+        else:
+            pad_params.append([0, 0])
+    in_layer_padded = tf.pad(in_layer, tf.constant(pad_params), 'CONSTANT')
+
+    # Cropping using slice
+    padded_shape = in_layer_padded.get_shape().as_list()
+
+    slice_offsets = [0]
+    slice_widths = [-1]
+    for dim in zip(padded_shape[1:], target_shape[1:]):
+        if dim[0] > dim[1]:
+            slice_offsets.append((dim[0] - dim[1]) // 2)
+        else:
+            slice_offsets.append(0)
+        slice_widths.append(dim[1])
+
+    in_layer_padded_trimmed = tf.slice(in_layer_padded, slice_offsets, slice_widths)
+
+    return in_layer_padded_trimmed

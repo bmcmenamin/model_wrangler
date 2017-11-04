@@ -58,9 +58,7 @@ class ConvolutionalAutoencoderModel(BaseNetwork):
         """Build all the model layers
         """
 
-        #
         # Input and encoding layers
-        #
         if isinstance(params.in_size, (list, tuple)):
             in_shape = [None].extend(params.in_size)
         else:
@@ -84,9 +82,7 @@ class ConvolutionalAutoencoderModel(BaseNetwork):
                     )
             )
 
-        #
         # Bottleneck and decoding layers
-        #
         decode_layers = [
             self.make_conv_layer(
                 encode_layers[-1],
@@ -106,22 +102,29 @@ class ConvolutionalAutoencoderModel(BaseNetwork):
                     )
             )
 
+        # Standardizing the input/output layer names
         in_layer = encode_layers[0]
-
-        out_layer = self.make_deconv_layer(
-            decode_layers[-1],
-            1,
-            'output_layer',
-            params.output_params
-            )
 
         target_layer = tf.placeholder(
             "float",
             name="target",
-            shape=in_shape
+            shape=in_layer.get_shape().as_list()
         )
 
-        loss = tops.loss_mse(target_layer, out_layer)
+        out_layer = tops.fit_to_shape(
+            self.make_deconv_layer(
+                decode_layers[-1],
+                1,
+                'output_layer',
+                params.output_params
+            ),
+            target_layer.get_shape().as_list()
+        )
+
+        loss = tops.loss_mse(
+            target_layer,
+            out_layer
+        )
 
         return in_layer, out_layer, target_layer, loss
 

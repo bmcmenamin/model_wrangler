@@ -1,5 +1,0 @@
-model_checkpoint_path: "mnist_example-00000009"
-all_model_checkpoint_paths: "mnist_example-00000006"
-all_model_checkpoint_paths: "mnist_example-00000007"
-all_model_checkpoint_paths: "mnist_example-00000008"
-all_model_checkpoint_paths: "mnist_example-00000009"

@@ -5,7 +5,9 @@ This is the model corral where a bunch of premade models live.
 Each of the .py files here defines a class for a type of model (e.g., Linear Regression).
 It should contain the following pieces:
 
-* A `<model_name>Params` class that inherits from `BaseNetworkParams`. Use this class to define default parameters for everything in your model by tweaking the class attribute `MODEL_SPECIFIC_ATTRIBUTES`
+* A `<model_name>Params` class that inherits from `BaseNetworkParams`. This class needs two dictionaries as class attributes:
+    * Set `MODEL_SPECIFIC_ATTRIBUTES` to define default parameters for everything in your model
+    * Set `LAYER_PARAM_TYPES` to indicate which of the parameters in MODEL_SPECIFIC_ATTRIBUTES need to be cast from dict to special layer config objects (e.g., `LayerConfig`)
 
 * A `<model_name>Model` that inherits from `BaseModel`.
     * Set the class attribute `PARAM_CLASS` equal to the class used for default parameters. Usually it'll be the `<model_name>Params` you've set up in the previous step.

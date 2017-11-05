@@ -1,6 +1,7 @@
 """
 Module contains tensorflow model definitions
 """
+import sys
 import os
 import logging
 import json
@@ -11,15 +12,24 @@ import tf_ops as tops
 import dataset_managers as dm
 
 
+LOGGER = logging.getLogger(__name__)
+h = logging.StreamHandler(sys.stdout)
+h.setFormatter(
+    logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+)
+LOGGER.addHandler(h)
+LOGGER.setLevel(logging.DEBUG)
+
+
 def make_dir(path):
     """Initialize directory"""
 
-    logging.info('Save directory : %s', path)
+    LOGGER.info('Save directory : %s', path)
 
     try:
         os.makedirs(path)
     except OSError:
-        logging.info('Directory %s already exists', path)
+        LOGGER.info('Directory %s already exists', path)
 
 
 class BaseNetworkParams(dict):
@@ -40,6 +50,9 @@ class BaseNetworkParams(dict):
     # pylint: disable=E1101
 
     # default values for required attributes
+
+    LAYER_PARAM_TYPES = {}
+
     REQUIRED_ATTRIBUTES = {
         "verb": True,
         "path": "",
@@ -80,13 +93,17 @@ class BaseNetworkParams(dict):
         make_dir(self.path)
         make_dir(self.tb_log_path)
 
+        for attr in self.LAYER_PARAM_TYPES:
+            new_attr = self.LAYER_PARAM_TYPES[attr](**getattr(self, attr))
+            setattr(self, attr, new_attr)
+
     def save(self):
         """save model params to JSON"""
 
         make_dir(self.path)
 
         params_fname = os.path.join(self.path, '-'.join([self.name, 'params.json']))
-        logging.info('Saving parameter file %s', params_fname)
+        LOGGER.info('Saving parameter file %s', params_fname)
 
         dict_to_dump = vars(self)
         for key in dict_to_dump:
@@ -290,6 +307,31 @@ class BaseNetwork(object):
 
         return layer_stack[-1]
 
+    def make_dense_output_layer(self, input_layer, num_units, layer_config):
+        """ Make a dense output layer broken into pre/post activation
+        levels
+
+        activation function/actiation-regularization
+        """
+
+        if isinstance(layer_config, dict):
+            layer_config = LayerConfig(**layer_config)
+
+        assert isinstance(layer_config, LayerConfig)
+
+        preact_output = tf.layers.dense(
+            input_layer,
+            num_units,
+            activation=None,
+            use_bias=layer_config.bias,
+            activity_regularizer=layer_config.act_reg,
+            name='pre-activation_output'
+        )
+
+        output = layer_config.activation_func()(preact_output)
+
+        return preact_output, output
+
     def make_conv_layer(self, input_layer, num_units, label, layer_config):
         """ Make a convolutional network layer
 
@@ -438,7 +480,9 @@ class LayerConfig(object):
         self.dropout_rate = dropout_rate
         
     def activation_func(self):
-        return getattr(tf.nn, self.activation, None)
+        if self.activation:
+            return getattr(tf.nn, self.activation, None)
+        return None
 
 
 class ConvLayerConfig(LayerConfig):
@@ -509,4 +553,3 @@ class ConvLayerConfig(LayerConfig):
             return tf.contrib.keras.layers.ZeroPadding2D
         elif self.dim == 3:
             return tf.contrib.keras.layers.ZeroPadding3D
-

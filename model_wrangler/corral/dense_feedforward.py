@@ -11,17 +11,25 @@ from model_wrangler.tf_models import BaseNetworkParams, BaseNetwork, LayerConfig
 class DenseFeedforwardParams(BaseNetworkParams):
     """Dense autoencoder params
     """
+
+    LAYER_PARAM_TYPES = {
+        "hidden_params": LayerConfig,
+        "output_params": LayerConfig,
+    }
+
     MODEL_SPECIFIC_ATTRIBUTES = {
         "name": "ff",
         "in_size": 10,
         "out_size": 2,
         "hidden_nodes": [5, 5],
-        "hidden_params": LayerConfig(dropout_rate=0.1),
-        "output_params": LayerConfig(
-            dropout_rate=None,
-            activation=None,
-            act_reg=None
-        ),
+        "hidden_params": {
+            "dropout_rate": 0.1
+        },
+        "output_params": {
+            "dropout_rate": None,
+            "activation": None,
+            "act_reg": None
+        },
     }
 
 
@@ -59,12 +67,11 @@ class DenseFeedforwardModel(BaseNetwork):
                     )
             )
 
-        out_layer = self.make_dense_layer(
+        preact_out_layer, out_layer = self.make_dense_output_layer(
             layer_stack[-1],
             params.out_size,
-            'output_layer',
             params.output_params
-            )
+        )
 
         target_layer = tf.placeholder(
             "float",
@@ -72,7 +79,12 @@ class DenseFeedforwardModel(BaseNetwork):
             shape=[None, params.out_size]
         )
 
-        loss = tops.loss_sigmoid_ce(target_layer, out_layer)
+        if params.output_params.activation in ['sigmoid']:
+            loss = tops.loss_sigmoid_ce(preact_out_layer, target_layer)
+        elif params.output_params.activation in ['softmax']:
+            loss = tops.loss_softmax_ce(preact_out_layer, target_layer)
+        else:
+            loss = tops.loss_mse(target_layer, out_layer)
 
         return in_layer, out_layer, target_layer, loss
 

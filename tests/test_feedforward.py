@@ -68,10 +68,10 @@ def test_conv_ff(in_dim=15, out_dim=3):
 if __name__ == "__main__":
 
     print("\n\nunit testing dense feedforward")
-    #ModelTester(DenseFeedforward)
+    ModelTester(DenseFeedforward)
 
     print("\n\ne2e testing dense feedforward")
-    #test_dense_ff()
+    test_dense_ff()
 
     print("\n\nunit testing conv feedforward")
     ModelTester(ConvolutionalFeedforward)

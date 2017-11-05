@@ -1,0 +1,55 @@
+{
+    "conv_nodes": [
+        16, 
+        24
+    ], 
+    "name": "mnist_example", 
+    "dense_nodes": [
+        10
+    ], 
+    "output_params": {
+        "layer_kws": {}, 
+        "activation": "softmax", 
+        "dropout_rate": null, 
+        "bias": true, 
+        "batchnorm": true, 
+        "act_reg": null
+    }, 
+    "learning_rate": 0.0001, 
+    "batch_size": 256, 
+    "holdout_prop": 0.1, 
+    "conv_params": {
+        "dim": 2, 
+        "layer_kws": {}, 
+        "kernel": [
+            5, 
+            5
+        ], 
+        "activation": "relu", 
+        "dropout_rate": 0.0, 
+        "pool_size": 2, 
+        "strides": 2, 
+        "bias": true, 
+        "batchnorm": true, 
+        "act_reg": null
+    }, 
+    "verb": true, 
+    "meta_filename": "./mnist_example/mnist_example-9", 
+    "tb_log_path": "./mnist_example/tb_log", 
+    "num_epochs": 10, 
+    "out_size": 10, 
+    "path": "./mnist_example", 
+    "dense_params": {
+        "layer_kws": {}, 
+        "activation": "relu", 
+        "dropout_rate": 0.1, 
+        "bias": true, 
+        "batchnorm": true, 
+        "act_reg": null
+    }, 
+    "in_size": [
+        28, 
+        28, 
+        1
+    ]
+}

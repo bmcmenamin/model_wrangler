@@ -1,5 +1,6 @@
 """Module implements the ModelWrangler object
 """
+import sys
 import os
 import logging
 import json
@@ -11,6 +12,14 @@ import tf_ops as tops
 from tf_models import BaseNetwork
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+
+LOGGER = logging.getLogger(__name__)
+h = logging.StreamHandler(sys.stdout)
+h.setFormatter(
+    logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+)
+LOGGER.addHandler(h)
+LOGGER.setLevel(logging.DEBUG)
 
 class ModelWrangler(object):
     """
@@ -54,11 +63,6 @@ class ModelWrangler(object):
 
         self.session_params = tops.set_max_threads(tops.set_session_params())
         self.params = model_class.PARAM_CLASS(**kwargs)
-
-        logging.basicConfig(
-            filename=os.path.join(self.params.path, '{}.log'.format(self.params.name)),
-            level=logging.DEBUG)
-
         self.tf_mod = model_class(self.params)
         self.sess = self.new_session()
         self.initialize()
@@ -66,14 +70,21 @@ class ModelWrangler(object):
     def save(self, iteration):
         """Save model parameters in a JSON and model weights in TF format"""
 
-        self.params.save()
+        path_parts = [
+            os.path.join(self.params.path, self.params.name),
+            iteration
+        ]
 
-        logging.info('Saving weights file in %s', self.params.path)
+        LOGGER.info('Saving weights file in %s', self.params.path)
         self.tf_mod.saver.save(
             self.sess,
-            save_path=os.path.join(self.params.path, self.params.name),
-            global_step=iteration,
+            save_path=path_parts[0],
+            global_step=path_parts[1],
         )
+
+        self.params.meta_filename = '{}-{}'.format(*path_parts)
+        self.params.save()
+
 
     @classmethod
     def load(cls, param_file):
@@ -85,12 +96,8 @@ class ModelWrangler(object):
         # initialize a new model, restore its weights
         new_model = cls(**params)
 
-        #meta_list = os.path.join(new_model.params.path, '*.meta')
-        #newest_meta_file = max(meta_list, key=os.path.getctime)
-        #new_model.tf_mod.saver = tf.train.import_meta_graph(newest_meta_file)
-
-        new_model.tf_mod.saver = tf.train.import_meta_graph(params.meta_filename)
         last_checkpoint = tf.train.latest_checkpoint(new_model.params.path)
+        new_model.tf_mod.saver = tf.train.import_meta_graph(last_checkpoint + '.meta')
         new_model.tf_mod.saver.restore(new_model.sess, last_checkpoint)
 
         return new_model
@@ -193,8 +200,8 @@ class ModelWrangler(object):
                 # logging elsewhere
                 train_error = self.score(X_batch, y_batch)
                 holdout_error = self.score(X_holdout, y_holdout)
-                logging.info("Batch %d: Training score = %0.6f", batch_counter, train_error)
-                logging.info("Batch %d: Holdout score = %0.6f", batch_counter, holdout_error)
+                LOGGER.info("Batch %d: Training score = %0.6f", batch_counter, train_error)
+                LOGGER.info("Batch %d: Holdout score = %0.6f", batch_counter, holdout_error)
 
             batch_counter += 1
 
@@ -210,7 +217,7 @@ class ModelWrangler(object):
 
         try:
             for epoch in range(self.params.num_epochs):
-                logging.info('Starting Epoch %d', epoch)
+                LOGGER.info('Starting Epoch %d', epoch)
                 self._run_epoch(self.sess, dataset, pos_classes)
                 self.save(epoch)
 

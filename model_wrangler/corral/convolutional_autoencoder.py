@@ -11,38 +11,46 @@ from model_wrangler.tf_models import BaseNetworkParams, BaseNetwork, ConvLayerCo
 class ConvolutionalAutoencoderParams(BaseNetworkParams):
     """Dense autoencoder params
     """
+
+    LAYER_PARAM_TYPES = {
+        "encode_params": ConvLayerConfig,
+        "bottleneck_params": ConvLayerConfig,
+        "decode_params": ConvLayerConfig,
+        "output_params": ConvLayerConfig
+    }
+
     MODEL_SPECIFIC_ATTRIBUTES = {
         "name": "conv_autoenc",
         "in_size": 40,
         "encode_nodes": [10],
-        "encode_params": ConvLayerConfig(
-            dropout_rate=0.1,
-            kernel=5,
-            strides=1,
-            pool_size=2
-        ),
+        "encode_params": {
+            "dropout_rate": 0.1,
+            "kernel": 5,
+            "strides": 1,
+            "pool_size": 2
+        },
         "bottleneck_dim": 3,
-        "bottleneck_params": ConvLayerConfig(
-            dropout_rate=None,
-            kernel=5,
-            strides=1,
-            pool_size=1
-        ),
+        "bottleneck_params": {
+            "dropout_rate": None,
+            "kernel": 5,
+            "strides": 1,
+            "pool_size": 1
+        },
         "decode_nodes": [10],
-        "decode_params": ConvLayerConfig(
-            dropout_rate=None,
-            kernel=5,
-            strides=1,
-            pool_size=2
-        ),
-        "output_params": ConvLayerConfig(
-            dropout_rate=None,
-            activation=None,
-            act_reg=None,
-            kernel=1,
-            strides=1,
-            pool_size=1
-        ),
+        "decode_params": {
+            "dropout_rate": None,
+            "kernel": 5,
+            "strides": 1,
+            "pool_size": 2
+        },
+        "output_params": {
+            "dropout_rate": None,
+            "activation": None,
+            "act_reg": None,
+            "kernel": 1,
+            "strides": 1,
+            "pool_size": 1
+        },
     }
 
 
@@ -59,10 +67,11 @@ class ConvolutionalAutoencoderModel(BaseNetwork):
         """
 
         # Input and encoding layers
+        in_shape = [None]
         if isinstance(params.in_size, (list, tuple)):
-            in_shape = [None].extend(params.in_size)
+            in_shape.extend(params.in_size)
         else:
-            in_shape = [None, params.in_size, 1]
+            in_shape.extend([params.in_size, 1])
 
         encode_layers = [
             tf.placeholder(

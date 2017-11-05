@@ -76,8 +76,8 @@ def accuracy(observed, actual):
     """Accuracy for one-hot encoded categories"""
 
     is_correct = tf.equal(tf.argmax(observed, axis=1), tf.argmax(actual, axis=1))
-    accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32))
-    return accuracy
+    acc = tf.reduce_mean(tf.cast(is_correct, tf.float32))
+    return acc
 
 #
 # Layer Utils

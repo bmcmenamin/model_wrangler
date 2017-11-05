@@ -11,20 +11,34 @@ from model_wrangler.tf_models import BaseNetworkParams, BaseNetwork, LayerConfig
 class DenseAutoencoderParams(BaseNetworkParams):
     """Dense autoencoder params
     """
+
+    LAYER_PARAM_TYPES = {
+        "encode_params": LayerConfig,
+        "decode_params": LayerConfig,
+        "bottleneck_params": LayerConfig,
+        "output_params": LayerConfig,
+    }
+
     MODEL_SPECIFIC_ATTRIBUTES = {
         "name": "autoenc",
         "in_size": 10,
         "encode_nodes": [5, 5],
-        "encode_params": LayerConfig(dropout_rate=0.1),
+        "encode_params": {
+            "dropout_rate": 0.1
+        },
         "decode_nodes": [5, 5],
-        "decode_params": LayerConfig(dropout_rate=None),
+        "decode_params": {
+            "dropout_rate": None
+        },
         "bottleneck_dim": 3,
-        "bottleneck_params": LayerConfig(dropout_rate=None),
-        "output_params": LayerConfig(
-            dropout_rate=None,
-            activation=None,
-            act_reg=None
-        ),
+        "bottleneck_params": {
+            "dropout_rate": None
+        },
+        "output_params": {
+            "dropout_rate": None,
+            "activation": None,
+            "act_reg": None,
+        }
     }
 
 

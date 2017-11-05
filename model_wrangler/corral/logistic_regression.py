@@ -48,7 +48,7 @@ class LogisticRegressionModel(BaseNetwork):
             shape=[None, params.out_size]
         )
 
-        loss = tops.loss_sigmoid_ce(target_layer, out_layer)
+        loss = tops.loss_sigmoid_ce(linear_output, target_layer)
 
         return in_layer, out_layer, target_layer, loss
 

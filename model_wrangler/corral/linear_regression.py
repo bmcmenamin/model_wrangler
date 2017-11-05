@@ -44,7 +44,7 @@ class LinearRegressionModel(BaseNetwork):
             shape=[None, params.out_size]
         )
 
-        loss = tops.loss_mse(target_layer, out_layer)
+        loss = tops.loss_mse(out_layer, target_layer)
 
         return in_layer, out_layer, target_layer, loss
 

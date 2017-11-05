@@ -10,8 +10,6 @@ import numpy as np
 from scipy.stats import zscore
 
 from model_wrangler.corral.dense_autoencoder import DenseAutoencoder
-
-from model_wrangler.tf_models import ConvLayerConfig, LayerConfig
 from model_wrangler.corral.convolutional_autoencoder import ConvolutionalAutoencoder
 
 from model_wrangler.tester import ModelTester

@@ -21,6 +21,15 @@ else:
 import numpy as np
 
 
+LOGGER = logging.getLogger(__name__)
+h = logging.StreamHandler(sys.stdout)
+h.setFormatter(
+    logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+)
+LOGGER.addHandler(h)
+LOGGER.setLevel(logging.DEBUG)
+
+
 def random_chunk_generator(iterable, block_size):
     """Collect data into fixed-length chunks or blocks
     
@@ -31,6 +40,7 @@ def random_chunk_generator(iterable, block_size):
     args = [iter(iterable)] * block_size
     return zip_longest(*args, fillvalue=None)
 
+
 def pad_list(in_list, pad_size):
     """
     Make a list a little longer by appending a randomly sampled
@@ -40,6 +50,7 @@ def pad_list(in_list, pad_size):
     pad_values = np.random.choice(in_list, pad_size, replace=True)
     new_list.extend(pad_values)
     return new_list
+
 
 def get_groups(output_data):
     """
@@ -58,6 +69,7 @@ def get_groups(output_data):
             group_to_idx[group] = [idx]
     return group_to_idx
 
+
 def random_split_list(in_list, split_proportion):
     """Randomly divide list into two parts"""
 
@@ -73,6 +85,7 @@ def random_split_list(in_list, split_proportion):
     list_0 = in_list[cutpoint:]
     list_1 = in_list[:cutpoint]
     return list_0, list_1
+
 
 def flatten_lists(list_of_lists):
     """Recursively flatten a list of lists"""
@@ -118,7 +131,7 @@ class DatasetManager(object):
         if len(self.y.shape) == 1:
             self.y = self.y.reshape(-1, 1)
 
-        logging.info('Input data size (%d, %d)', self.X.shape[0], self.X.shape[1])
+        LOGGER.info('Input data size (%d, %d)', self.X.shape[0], self.X.shape[1])
 
         if not holdout_prop:
             holdout_prop = 0.0
@@ -128,7 +141,7 @@ class DatasetManager(object):
 
         if categorical:
             self.groups = get_groups(self.y)
-            logging.info('Input has % groups', len(self.groups))
+            LOGGER.info('Input has %d groups', len(self.groups))
         else:
             self.groups = {None: range(X.shape[0])}
 
@@ -140,8 +153,8 @@ class DatasetManager(object):
 
         self.nsamp_train = sum([len(g) for g in self.groups.values()])
         self.nsamp_holdout = sum([len(g) for g in self.groups_holdout.values()])
-        logging.info('Num training samples %d', self.nsamp_train)
-        logging.info('Num holdout samples %d', self.nsamp_holdout)
+        LOGGER.info('Num training samples %d', self.nsamp_train)
+        LOGGER.info('Num holdout samples %d', self.nsamp_holdout)
 
     def get_batches(self, pos_classes=None, batch_size=256, **kwargs):
         """

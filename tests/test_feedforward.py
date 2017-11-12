@@ -9,13 +9,13 @@
 import numpy as np
 from scipy.stats import zscore
 
-import model_wrangler.tf_ops as tops
-from model_wrangler.tester import ModelTester
+import modelwrangler.tf_ops as tops
+from modelwrangler.tester import ModelTester
 
-from model_wrangler.tf_models import ConvLayerConfig, LayerConfig
+from modelwrangler.tf_models import ConvLayerConfig, LayerConfig
 
-from model_wrangler.corral.dense_feedforward import DenseFeedforward
-from model_wrangler.corral.convolutional_feedforward import ConvolutionalFeedforward
+from modelwrangler.corral.dense_feedforward import DenseFeedforward
+from modelwrangler.corral.convolutional_feedforward import ConvolutionalFeedforward
 
 
 def make_testdata(in_dim=100, out_dim=3, n_samp=1000):
@@ -39,6 +39,7 @@ def test_dense_ff(in_dim=15, out_dim=3):
     X, y = make_testdata(in_dim=in_dim, out_dim=out_dim)
     ff_model = DenseFeedforward(
         in_size=in_dim,
+        hidden_nodes=[2, 2],
         out_size=out_dim)
 
     print("Loss: {}".format(ff_model.score(X, y)))
@@ -56,6 +57,7 @@ def test_conv_ff(in_dim=15, out_dim=3):
     X = X[:, :, np.newaxis]
     ff_model = ConvolutionalFeedforward(
         in_size=in_dim,
+        hidden_nodes=[2, 2],
         out_size=out_dim)
 
     print("Loss: {}".format(ff_model.score(X, y)))

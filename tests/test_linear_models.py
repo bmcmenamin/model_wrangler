@@ -12,10 +12,10 @@ from scipy.stats import zscore
 from sklearn.linear_model import LogisticRegression as sk_LogisticRegression
 from sklearn.linear_model import LinearRegression as sk_LinearRegression
 
-from model_wrangler.corral.linear_regression import LinearRegression
-from model_wrangler.corral.logistic_regression import LogisticRegression
+from modelwrangler.corral.linear_regression import LinearRegression
+from modelwrangler.corral.logistic_regression import LogisticRegression
 
-from model_wrangler.tester import ModelTester
+from modelwrangler.tester import ModelTester
 
 
 def make_linear_reg_testdata(in_dim=2, n_samp=1000):

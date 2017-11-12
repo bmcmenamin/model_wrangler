@@ -9,10 +9,10 @@
 import numpy as np
 from scipy.stats import zscore
 
-from model_wrangler.corral.dense_autoencoder import DenseAutoencoder
-from model_wrangler.corral.convolutional_autoencoder import ConvolutionalAutoencoder
+from modelwrangler.corral.dense_autoencoder import DenseAutoencoder
+from modelwrangler.corral.convolutional_autoencoder import ConvolutionalAutoencoder
 
-from model_wrangler.tester import ModelTester
+from modelwrangler.tester import ModelTester
 
 
 def make_timeseries_testdata(in_dim=100, n_samp=1000):

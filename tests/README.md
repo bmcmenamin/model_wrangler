@@ -1,4 +1,4 @@
-# model_wrangler Tests
+# modelwrangler Tests
 
 When I started out, I had envisioned writing a tonne of unit tests. But after a few days, I realized that was boring and I'd probably end up dropping the whole project if I had to spend my free time doing that.
 

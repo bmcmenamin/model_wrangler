@@ -50,7 +50,7 @@ def test_dense_ff(in_dim=15, out_dim=3):
 
 
 def test_conv_ff(in_dim=15, out_dim=3):
-    """Test dense autoencodes
+    """Test dense autoencoder
     """
 
     X, y = make_testdata(in_dim=in_dim, out_dim=out_dim)

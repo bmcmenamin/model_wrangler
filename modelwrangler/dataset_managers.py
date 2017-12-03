@@ -131,7 +131,7 @@ class DatasetManager(object):
         if len(self.y.shape) == 1:
             self.y = self.y.reshape(-1, 1)
 
-        LOGGER.info('Input data size (%d, %d)', self.X.shape[0], self.X.shape[1])
+        LOGGER.info('Input data size: %s', str(X.shape))
 
         if not holdout_prop:
             holdout_prop = 0.0
@@ -254,8 +254,36 @@ class CategoricalDataManager(DatasetManager):
             yield self._return_idx(batch_idx)
 
 
+class SiameseDataManager(CategoricalDataManager):
+    """Turn handle datasets for siamese training"""
+
+    def __init__(self, X_paired, y, holdout_prop=None, categorical=True):
+
+        super(SiameseDataManager, self).__init__(
+            X_paired[0], y,
+            holdout_prop=holdout_prop)
+
+        if X_paired[0].shape != X_paired[1].shape:
+            raise ValueError(
+                'Shapes of siamese inputs are mismatched:',
+                'X_0 {}; X_1 {}'.format(X_paired[0].shape, X_paired[1].shape)
+            )
+
+        self.X_1 = X_paired[1]
+
+    def _return_idx(self, idx):
+        idx = [i for i in idx if i is not None]
+        if idx:
+            subset_X = np.take(self.X, idx, axis=0)
+            subset_X_1 = np.take(self.X_1, idx, axis=0)
+            subset_y = np.take(self.y, idx, axis=0)
+            return [subset_X, subset_X_1], subset_y
+
+
 class TimeseriesDataManager(DatasetManager):
     """Class for handling timeseries data"""
+
+    # TODO: Build this dataset manager
 
     def __init__(self, ts, holdout_prop=None):
 

@@ -15,6 +15,7 @@ def set_session_params(cfg_params=None):
 
     return tf.ConfigProto(**cfg_params)
 
+
 def set_max_threads(sess_cfg, max_threads=None):
     """Set max threads used in session"""
 
@@ -26,6 +27,25 @@ def set_max_threads(sess_cfg, max_threads=None):
     sess_cfg.allow_soft_placement = True
     return sess_cfg
 
+
+def make_data_dict(tf_model, x_data, y_data, is_training=False):
+    """Make a dict of data for feed_dict"""
+
+    data_dict = {}
+
+    if y_data is not None:
+        data_dict[tf_model.target] = y_data
+
+    if is_training is not None:
+        data_dict[tf_model.is_training] = is_training
+
+    if isinstance(x_data, list):
+        for input_layer, input_data in zip(tf_model.input, x_data):
+            data_dict[input_layer] = input_data
+    elif x_data is not None:
+        data_dict[tf_model.input] = x_data
+
+    return data_dict
 
 #
 # Loss functions
@@ -42,6 +62,7 @@ def layer_logits(layer, pad=1.0e-8):
     pad_layer = (1 - 2 * pad) * layer + pad
     logit_values = tf.log(pad_layer) - tf.log(1 - pad_layer)
     return logit_values
+
 
 def loss_mse(observed, actual):
     """Mean squared error loss"""
@@ -60,6 +81,7 @@ def loss_sigmoid_ce(observed, actual):
     per_batch_loss = tf.reduce_sum(per_sample_loss) / tf.cast(numel, tf.float32)
     return per_batch_loss
 
+
 def loss_softmax_ce(observed, actual):
     """Calculate softmax cross entropy loss"""
 
@@ -70,6 +92,7 @@ def loss_softmax_ce(observed, actual):
     numel = tf.reduce_prod(tf.size(observed))
     per_batch_loss = tf.reduce_sum(per_sample_loss) / tf.cast(numel, tf.float32)
     return per_batch_loss
+
 
 def accuracy(observed, actual):
     """Accuracy for one-hot encoded categories"""

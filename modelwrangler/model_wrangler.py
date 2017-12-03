@@ -21,6 +21,7 @@ h.setFormatter(
 LOGGER.addHandler(h)
 LOGGER.setLevel(logging.DEBUG)
 
+
 class ModelWrangler(object):
     """
     Loads a model class that you've defined and wraps it with a bunch of helpful methods:
@@ -105,10 +106,12 @@ class ModelWrangler(object):
     def predict(self, input_x):
         """Get activations for every layer given an input matrix, input_x"""
 
-        data_dict = {
-            self.tf_mod.input: input_x,
-            self.tf_mod.is_training: False
-        }
+        data_dict = tops.make_data_dict(
+            self.tf_mod,
+            input_x,
+            None,
+            is_training=False
+        )
 
         vals = self.sess.run(self.tf_mod.output, feed_dict=data_dict)
 
@@ -120,11 +123,12 @@ class ModelWrangler(object):
         `score_func` (defults to model loss function)
         """
 
-        data_dict = {
-            self.tf_mod.input: input_x,
-            self.tf_mod.target: target_y,
-            self.tf_mod.is_training: False
-        }
+        data_dict = tops.make_data_dict(
+            self.tf_mod,
+            input_x,
+            target_y,
+            is_training=False
+        )
 
         if score_func is None:
             score_func = self.tf_mod.loss
@@ -142,11 +146,12 @@ class ModelWrangler(object):
         # which layer has the features you care about?
         feature_layer_idx = 0
 
-        data_dict = {
-            self.tf_mod.input: input_x,
-            self.tf_mod.target: target_y,
-            self.tf_mod.is_training: False
-        }
+        data_dict = tops.make_data_dict(
+            self.tf_mod,
+            input_x,
+            target_y,
+            is_training=False
+        )
 
         if score_func is None:
             score_func = self.tf_mod.loss
@@ -178,11 +183,13 @@ class ModelWrangler(object):
 
         batch_counter = 0
         for X_batch, y_batch in batch_iterator:
-            data_dict = {
-                self.tf_mod.input: X_batch,
-                self.tf_mod.target: y_batch,
-                self.tf_mod.is_training: True
-            }
+
+            data_dict = tops.make_data_dict(
+                self.tf_mod,
+                X_batch,
+                y_batch,
+                is_training=True
+            )
 
             sess.run(
                 self.tf_mod.train_step,

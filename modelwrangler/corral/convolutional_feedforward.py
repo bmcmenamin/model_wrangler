@@ -112,7 +112,7 @@ class ConvolutionalFeedforwardModel(BaseNetwork):
             )
 
 
-        # Output layer is borken into two pieces. The pre/post the application
+        # Output layer is broken into two pieces. The pre/post the application
         # of the activation function. That's because the loss functions
         # for cross-entropy rely on the pre-activation scores in preact
 

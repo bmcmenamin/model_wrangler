@@ -24,10 +24,6 @@ mnist_data = fetch_mldata('MNIST original', data_home=DATA_DIR)
 image_data = mnist_data['data'].reshape(-1, 28, 28, order='F')[..., np.newaxis]
 del mnist_data
 
-train_data = image_data[::10, :, :, :]
-test_data = image_data[1::10, :, :, :]
-
-
 train_data = image_data[::1000, :, :, :]
 test_data = image_data[1::1000, :, :, :]
 

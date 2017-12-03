@@ -6,11 +6,25 @@ in this post by Chase Roberts:
 import numpy as np
 import tensorflow as tf
 
+import modelwrangler.tf_ops as tops
+
 def _get_shapes(tf_model):
-    input_shape = [i.value for i in tf_model.input.get_shape()[1:]]
+
+    if isinstance(tf_model.input, list):
+        input_shape = [[i.value for i in j.get_shape()[1:]] for j in tf_model.input]
+    else:
+        input_shape = [i.value for i in tf_model.input.get_shape()[1:]]
+
     output_shape = [i.value for i in tf_model.output.get_shape()[1:]]
     return input_shape, output_shape
 
+def _make_dummy_input(input_size, num_samples):
+
+    if isinstance(input_size[0], list):
+        dummy_input = [np.ones([num_samples] + i) for i in input_size]
+    else:
+        dummy_input = np.ones([num_samples] + i)
+    return dummy_input
 
 class ModelTester(object):
     """Run standard unit tests on a model"""
@@ -26,14 +40,15 @@ class ModelTester(object):
         model = self.model_class()
 
         in_shape, out_shape = _get_shapes(model.tf_mod)
-        dummy_input = np.ones([num_samples] + in_shape)
+        dummy_input = _make_dummy_input(in_shape, num_samples)
         dummy_output = 0.5 * np.ones([num_samples] + out_shape)
 
-        feed_dict = {
-            model.tf_mod.input: dummy_input,
-            model.tf_mod.target: dummy_output,
-            model.tf_mod.is_training: True,
-        }
+        feed_dict = tops.make_data_dict(
+            model.tf_mod,
+            dummy_input,
+            dummy_output,
+            is_training=True
+        )
 
         loss = model.sess.run(model.tf_mod.loss, feed_dict=feed_dict)
 
@@ -49,7 +64,7 @@ class ModelTester(object):
         model = self.model_class()
 
         in_shape, out_shape = _get_shapes(model.tf_mod)
-        dummy_input = np.ones([num_samples] + in_shape)
+        dummy_input = _make_dummy_input(in_shape, num_samples)
         dummy_output = 0.5 * np.ones([num_samples] + out_shape)
 
         model.initialize()

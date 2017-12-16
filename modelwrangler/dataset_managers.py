@@ -1,6 +1,4 @@
-"""
-This module has the tools that do dataset management
-"""
+"""This module has the tools that do dataset management"""
 
 # C'mon pylint, X and y is a perfectly acceptable names here...
 # pylint: disable=C0103

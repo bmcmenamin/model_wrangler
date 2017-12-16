@@ -1,5 +1,5 @@
-"""Module implements the ModelWrangler object
-"""
+"""Module implements the ModelWrangler object"""
+
 import sys
 import os
 import logging

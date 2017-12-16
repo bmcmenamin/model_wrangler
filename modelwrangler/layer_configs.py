@@ -1,4 +1,4 @@
-""" Module defines objects used for building Layer configurations"""
+"""Module defines objects used for building Layer configurations"""
 
 import tensorflow as tf
 

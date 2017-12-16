@@ -1,6 +1,5 @@
-"""
-Module contains tensorflow model definitions
-"""
+"""Module contains tensorflow model definitions"""
+
 import sys
 import os
 import logging

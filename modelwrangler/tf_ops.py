@@ -1,5 +1,5 @@
-"""Module contains common tensorflow operations
-"""
+"""Module contains common tensorflow operations"""
+
 from multiprocessing import cpu_count
 import tensorflow as tf
 

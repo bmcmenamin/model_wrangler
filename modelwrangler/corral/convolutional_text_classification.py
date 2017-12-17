@@ -38,7 +38,7 @@ class ConvolutionalTextParams(BaseNetworkParams):
             "dropout_rate": 0.1,
             "kernel": 3,
             "strides": 1,
-            "pool_size": 1
+            "pool_size": 2
         },
 
         "dense_nodes": [5, 5],
@@ -89,7 +89,7 @@ class ConvolutionalTextModel(BaseNetwork):
         character_depth = len(good_chars) + 2
 
         layer_stack.append(
-            tops.onehot_encode_layer(
+            self.make_onehot_encode_layer(
                 layer_stack[-1],
                 character_depth
             )

@@ -53,9 +53,9 @@ def test_text_ff():
 
 if __name__ == "__main__":
 
-    print("\n\nunit testing dense feedforward")
+    print("\n\nunit testing text convolutional model")
     ModelTester(ConvolutionalText)
 
-    print("\n\ne2e testing dense feedforward")
+    print("\n\ne2e testing text convolutional model")
     test_text_ff()
 

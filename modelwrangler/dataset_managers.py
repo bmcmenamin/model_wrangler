@@ -292,7 +292,7 @@ class TextDataManager(CategoricalDataManager):
             for x in X
         ])
 
-        y = np.array(y).reshape(-1, 1)
+        y = np.vstack(y)
 
         super(TextDataManager, self).__init__(
             X_padded, y,

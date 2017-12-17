@@ -18,6 +18,7 @@ else:
 
 import numpy as np
 
+from .tf_ops import TextProcessor
 
 LOGGER = logging.getLogger(__name__)
 h = logging.StreamHandler(sys.stdout)
@@ -278,6 +279,27 @@ class SiameseDataManager(CategoricalDataManager):
             return [subset_X, subset_X_1], subset_y
 
 
+class TextDataManager(CategoricalDataManager):
+    """Class for handling text samples"""
+
+    def __init__(self, X, y, pad_len=128, holdout_prop=None, good_chars=None):
+        """Initialize this with X as a list of strings and y as a list of outputs"""
+
+        self.tp = TextProcessor(good_chars=good_chars)
+        
+        X_padded = np.vstack([
+            self.tp.string_to_ints(x, pad_len=pad_len)
+            for x in X
+        ])
+
+        y = np.array(y).reshape(-1, 1)
+
+        super(TextDataManager, self).__init__(
+            X_padded, y,
+            categorical=True,
+            holdout_prop=holdout_prop)
+
+
 class TimeseriesDataManager(DatasetManager):
     """Class for handling timeseries data"""
 
@@ -294,7 +316,6 @@ class TimeseriesDataManager(DatasetManager):
             categorical=False,
             holdout_prop=0.0)
 
-        self.batches = self.random_batches
         raise NotImplementedError
 
     def timeseries_to_trainingpairs(self, timeseries):

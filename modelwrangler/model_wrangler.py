@@ -8,8 +8,8 @@ import json
 import numpy as np
 import tensorflow as tf
 
-import modelwrangler.tf_ops as tops
-from modelwrangler.tf_models import BaseNetwork
+from .tf_ops import set_max_threads, set_session_params, make_data_dict
+from .tf_models import BaseNetwork
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
@@ -62,7 +62,7 @@ class ModelWrangler(object):
     def __init__(self, model_class=BaseNetwork, **kwargs):
         """Initialize a tensorflow model"""
 
-        self.session_params = tops.set_max_threads(tops.set_session_params())
+        self.session_params = set_max_threads(set_session_params())
         self.params = model_class.PARAM_CLASS(**kwargs)
         self.tf_mod = model_class(self.params)
         self.sess = self.new_session()
@@ -106,7 +106,7 @@ class ModelWrangler(object):
     def predict(self, input_x):
         """Get activations for every layer given an input matrix, input_x"""
 
-        data_dict = tops.make_data_dict(
+        data_dict = make_data_dict(
             self.tf_mod,
             input_x,
             None,
@@ -123,7 +123,7 @@ class ModelWrangler(object):
         `score_func` (defults to model loss function)
         """
 
-        data_dict = tops.make_data_dict(
+        data_dict = make_data_dict(
             self.tf_mod,
             input_x,
             target_y,
@@ -146,7 +146,7 @@ class ModelWrangler(object):
         # which layer has the features you care about?
         feature_layer_idx = 0
 
-        data_dict = tops.make_data_dict(
+        data_dict = make_data_dict(
             self.tf_mod,
             input_x,
             target_y,
@@ -184,7 +184,7 @@ class ModelWrangler(object):
         batch_counter = 0
         for X_batch, y_batch in batch_iterator:
 
-            data_dict = tops.make_data_dict(
+            data_dict = make_data_dict(
                 self.tf_mod,
                 X_batch,
                 y_batch,
@@ -220,7 +220,8 @@ class ModelWrangler(object):
 
         dataset = self.tf_mod.DATA_CLASS(
             input_x, target_y,
-            holdout_prop=self.params.holdout_prop)
+            **self.params
+        )
 
         try:
             for epoch in range(self.params.num_epochs):

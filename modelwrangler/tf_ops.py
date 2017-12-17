@@ -1,6 +1,10 @@
 """Module contains common tensorflow operations"""
 
+import string
 from multiprocessing import cpu_count
+
+from unidecode import unidecode
+
 import tensorflow as tf
 
 #
@@ -141,3 +145,95 @@ def fit_to_shape(in_layer, target_shape):
     in_layer_padded_trimmed = tf.slice(in_layer_padded, slice_offsets, slice_widths)
 
     return in_layer_padded_trimmed
+
+
+#
+# Text vectorizing tools
+#
+
+class TextProcessor(object):
+    """Object that handles mapping characters to onehot embeddings
+    and back and forth. Generally uses unicode
+    """
+
+    MISSING_CHAR = '?'
+    PAD_CHAR = ' '
+    DEFAULT_CHARS = string.ascii_letters + string.digits
+
+    def __init__(self, good_chars=None):
+
+        if good_chars is None:
+            self.good_chars = self.DEFAULT_CHARS
+        else:
+            self.good_chars = good_chars
+        self.good_chars = unidecode(self.good_chars)
+
+        self.char_to_int = {val: key for key, val in enumerate(self.good_chars)}
+        self.int_to_char = {key: val for key, val in enumerate(self.good_chars)}
+
+        self.num_chars = len(self.char_to_int)
+
+        self.missing_char_idx = self.num_chars
+        self.pad_char_idx = self.num_chars + 1
+
+        self.char_to_int[unidecode(self.MISSING_CHAR)] = self.missing_char_idx
+        self.char_to_int[unidecode(self.PAD_CHAR)] = self.pad_char_idx
+
+        self.int_to_char[self.missing_char_idx] = unidecode(self.MISSING_CHAR)
+        self.int_to_char[self.pad_char_idx] = unidecode(self.PAD_CHAR)
+
+    def string_to_ints(self, in_string, pad_len=None):
+        """Take a sting, and turn it into a list of integers"""
+
+        char_list = list(unidecode(in_string))
+
+        if pad_len is not None:
+            char_list = char_list[:pad_len]
+
+        int_list = [self.char_to_int.get(c, self.missing_char_idx)  for c in char_list]
+
+        char_len = len(char_list)
+        if pad_len is not None and char_len < pad_len:
+            pad_size = char_len - pad_len
+            int_list.extend([self.pad_char_idx] * pad_size)
+
+        return int_list
+
+    def ints_to_string(self, in_ints):
+        """Take a list of ints, turn them into a single string"""
+
+        char_list = [self.int_to_char[c] for c in in_ints if c is not self.pad_char_idx]
+        out_string = ''.join(char_list)
+        return out_string
+
+
+def onehot_encode_layer(in_layer, max_int):
+    """return a layer that one-hot encodes an int layer
+
+    Args:
+        in_layer: A layer consisting of integer values
+
+    Returns:
+        a new layer that has one-hot encoded the integers
+    """
+
+    onehot_layer = tf.one_hot(
+        tf.to_int32(in_layer),
+        max_int,
+        axis=-1
+    )
+
+    return onehot_layer
+
+def onehot_decode_layer(in_layer):
+    """return a layer takes one-hot encoded layer to int
+    Args:
+        in_layer: A of one-hot endcoded values
+
+    Returns:
+        a new layer with the index of the largest positive value
+    """
+
+    out_layer = tf.argmax(in_layer, axis=-1)
+    return out_layer
+

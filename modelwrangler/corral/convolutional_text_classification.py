@@ -1,15 +1,20 @@
-"""Module sets up Dense Autoencoder model"""
+"""Module sets up Convolutional Text Classifier"""
 
 import tensorflow as tf
 
 from modelwrangler.model_wrangler import ModelWrangler
 import modelwrangler.tf_ops as tops
+
+from modelwrangler.dataset_managers import TextDataManager
+
 from modelwrangler.tf_models import (
     BaseNetworkParams, BaseNetwork,
-    ConvLayerConfig, LayerConfig
+    ConvLayerConfig, LayerConfig,
 )
 
-class ConvolutionalFeedforwardParams(BaseNetworkParams):
+PAD_LENGTH = 256
+
+class ConvolutionalTextParams(BaseNetworkParams):
     """Convolutional feedforward params
     """
 
@@ -19,16 +24,21 @@ class ConvolutionalFeedforwardParams(BaseNetworkParams):
         "output_params": LayerConfig,
     }
 
+    DATASET_MANAGER_PARAMS = {
+        "holdout_prop": 0.1,    
+        'pad_len': PAD_LENGTH
+    }
+
     MODEL_SPECIFIC_ATTRIBUTES = {
-        "name": "conv_ff",
-        "in_size": 10,
-        "out_size": 2,
-        "conv_nodes": [5, 5],
+        "name": "conv_text",
+        "in_size": PAD_LENGTH,
+        "out_size": 1,
+        "conv_nodes": [5],
         "conv_params": {
             "dropout_rate": 0.1,
-            "kernel": 5,
+            "kernel": 3,
             "strides": 1,
-            "pool_size": 2
+            "pool_size": 1
         },
 
         "dense_nodes": [5, 5],
@@ -46,7 +56,7 @@ class ConvolutionalFeedforwardParams(BaseNetworkParams):
     }
 
 
-class ConvolutionalFeedforwardModel(BaseNetwork):
+class ConvolutionalTextModel(BaseNetwork):
     """Convolutional feedforward model that has a
     couple convolutional layers and a couple of dense
     layers leading up to an output
@@ -54,7 +64,8 @@ class ConvolutionalFeedforwardModel(BaseNetwork):
 
     # pylint: disable=too-many-instance-attributes
 
-    PARAM_CLASS = ConvolutionalFeedforwardParams
+    PARAM_CLASS = ConvolutionalTextParams
+    DATA_CLASS = TextDataManager
 
     def setup_layers(self, params):
         """Build all the model layers
@@ -65,20 +76,24 @@ class ConvolutionalFeedforwardModel(BaseNetwork):
         #
 
         # Input and encoding layers
-        in_shape = [None]
-        if isinstance(params.in_size, (list, tuple)):
-            in_shape.extend(params.in_size)
-        else:
-            in_shape.extend([params.in_size, 1])
-
         layer_stack = [
             tf.placeholder(
-                "float",
+                tf.int32,
                 name="input",
-                shape=in_shape
+                shape=[None, params.in_size]
                 )
         ]
         in_layer = layer_stack[0]
+
+        good_chars = getattr(params, 'good_chars', tops.TextProcessor.DEFAULT_CHARS)
+        character_depth = len(good_chars) + 2
+
+        layer_stack.append(
+            tops.onehot_encode_layer(
+                layer_stack[-1],
+                character_depth
+            )
+        )
 
         # Add conv layers
         for idx, num_nodes in enumerate(params.conv_nodes):
@@ -109,7 +124,6 @@ class ConvolutionalFeedforwardModel(BaseNetwork):
                     )
             )
 
-
         # Output layer is broken into two pieces. The pre/post the application
         # of the activation function. That's because the loss functions
         # for cross-entropy rely on the pre-activation scores in preact
@@ -128,19 +142,17 @@ class ConvolutionalFeedforwardModel(BaseNetwork):
 
         if params.output_params.activation in ['sigmoid']:
             loss = tops.loss_sigmoid_ce(preact_out_layer, target_layer)
-        elif params.output_params.activation in ['softmax']:
-            loss = tops.loss_softmax_ce(preact_out_layer, target_layer)
         else:
-            loss = tops.loss_mse(target_layer, out_layer)
+            loss = tops.loss_softmax_ce(preact_out_layer, target_layer)
 
         return in_layer, out_layer, target_layer, loss
 
 
-class ConvolutionalFeedforward(ModelWrangler):
+class ConvolutionalText(ModelWrangler):
     """Dense Autoencoder
     """
     def __init__(self, in_size=10, **kwargs):
-        super(ConvolutionalFeedforward, self).__init__(
-            model_class=ConvolutionalFeedforwardModel,
+        super(ConvolutionalText, self).__init__(
+            model_class=ConvolutionalTextModel,
             in_size=in_size,
             **kwargs)

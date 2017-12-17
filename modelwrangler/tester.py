@@ -6,7 +6,7 @@ in this post by Chase Roberts:
 import numpy as np
 import tensorflow as tf
 
-import modelwrangler.tf_ops as tops
+from .tf_ops import make_data_dict
 
 def _get_shapes(tf_model):
 
@@ -23,7 +23,7 @@ def _make_dummy_input(input_size, num_samples):
     if isinstance(input_size[0], list):
         dummy_input = [np.ones([num_samples] + i) for i in input_size]
     else:
-        dummy_input = np.ones([num_samples] + i)
+        dummy_input = np.ones([num_samples] + input_size)
     return dummy_input
 
 class ModelTester(object):
@@ -40,10 +40,11 @@ class ModelTester(object):
         model = self.model_class()
 
         in_shape, out_shape = _get_shapes(model.tf_mod)
+
         dummy_input = _make_dummy_input(in_shape, num_samples)
         dummy_output = 0.5 * np.ones([num_samples] + out_shape)
 
-        feed_dict = tops.make_data_dict(
+        feed_dict = make_data_dict(
             model.tf_mod,
             dummy_input,
             dummy_output,

@@ -1,6 +1,4 @@
-"""
-Module sets up Dense Autoencoder model
-"""
+"""Module sets up Dense Autoencoder model"""
 
 import tensorflow as tf
 

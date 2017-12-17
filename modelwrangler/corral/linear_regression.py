@@ -1,6 +1,4 @@
-"""
-Module sets up Linear Regression model
-"""
+"""Module sets up Linear Regression model"""
 
 import tensorflow as tf
 

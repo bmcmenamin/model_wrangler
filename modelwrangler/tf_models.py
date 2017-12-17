@@ -7,13 +7,14 @@ import json
 
 import tensorflow as tf
 
-import modelwrangler.tf_ops as tops
+from .tf_ops import loss_sigmoid_ce
 
-from modelwrangler.dataset_managers import (
+
+from .dataset_managers import (
     DatasetManager
 )
 
-from modelwrangler.layer_configs import (
+from .layer_configs import (
     LayerConfig,
     ConvLayerConfig
 )
@@ -59,6 +60,10 @@ class BaseNetworkParams(dict):
 
     LAYER_PARAM_TYPES = {}
 
+    DATASET_MANAGER_PARAMS = {
+        "holdout_prop": 0.1,    
+    }
+
     REQUIRED_ATTRIBUTES = {
         "verb": True,
         "path": "",
@@ -66,7 +71,6 @@ class BaseNetworkParams(dict):
         "tb_log_path": "",
         "batch_size": 256,
         "num_epochs": 3,
-        "holdout_prop": 0.1,
         "learning_rate": 0.0001
     }
 
@@ -89,6 +93,10 @@ class BaseNetworkParams(dict):
         # Set model-specific attributes from kwargs or defaults
         for attr in self.MODEL_SPECIFIC_ATTRIBUTES:
             setattr(self, attr, kwargs.get(attr, self.MODEL_SPECIFIC_ATTRIBUTES[attr]))
+
+        # Set model-specific attributes from kwargs or defaults
+        for attr in self.DATASET_MANAGER_PARAMS:
+            setattr(self, attr, kwargs.get(attr, self.DATASET_MANAGER_PARAMS[attr]))
 
         # path is required, but doesn't have a simple default so we specify it
         # here at the time the model is initialized and 'name' has been set
@@ -163,9 +171,10 @@ class BaseNetwork(object):
             shape=[None, params.out_size]
         )
 
-        loss = tops.loss_sigmoid_ce(target_layer, in_layer)
+        loss = loss_sigmoid_ce(target_layer, in_layer)
 
         return in_layer, out_layer, target_layer, loss
+
 
     def setup_training(self, learning_rate):
         """Set up loss and training step"""

@@ -28,7 +28,10 @@ It should contain the following pieces:
 Current models:
 * `linear_regression`: Linear Regression
 * `logistic_regression`: Logistic Regression
+
 * `dense_autoencoder`: Is an autoencoder built with densely connected layers
 * `convolutional_autoencoder`: Is an autoencoder built with convolutional layers
+
 * `dense_feedforward`: Feedforward net with all dense connections model
 * `convolutional_feedforward`: Feedforward net with convolutional layers and then dense layers
+* `convolutional_siamese`: Convolutional networks trained with siamese pairs

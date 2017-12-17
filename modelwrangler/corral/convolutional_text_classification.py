@@ -25,8 +25,8 @@ class ConvolutionalTextParams(BaseNetworkParams):
     }
 
     DATASET_MANAGER_PARAMS = {
-        "holdout_prop": 0.1,    
-        'pad_len': PAD_LENGTH
+        'pad_len': PAD_LENGTH,
+        'holdout_prop': 0.1
     }
 
     MODEL_SPECIFIC_ATTRIBUTES = {
@@ -50,7 +50,7 @@ class ConvolutionalTextParams(BaseNetworkParams):
 
         "output_params": {
             "dropout_rate": 0.0,
-            "activation": None,
+            "activation": "sigmoid",
             "act_reg": None
         },
     }
@@ -68,8 +68,7 @@ class ConvolutionalTextModel(BaseNetwork):
     DATA_CLASS = TextDataManager
 
     def setup_layers(self, params):
-        """Build all the model layers
-        """
+        """Build all the model layers"""
 
         #
         # Input layer
@@ -81,8 +80,9 @@ class ConvolutionalTextModel(BaseNetwork):
                 tf.int32,
                 name="input",
                 shape=[None, params.in_size]
-                )
+            )
         ]
+
         in_layer = layer_stack[0]
 
         good_chars = getattr(params, 'good_chars', tops.TextProcessor.DEFAULT_CHARS)
@@ -103,7 +103,7 @@ class ConvolutionalTextModel(BaseNetwork):
                     num_nodes,
                     'conv_{}'.format(idx),
                     params.conv_params
-                    )
+                )
             )
 
         # Flatten convolutional layers
@@ -121,7 +121,7 @@ class ConvolutionalTextModel(BaseNetwork):
                     num_nodes,
                     'dense_{}'.format(idx),
                     params.dense_params
-                    )
+                )
             )
 
         # Output layer is broken into two pieces. The pre/post the application
@@ -149,10 +149,9 @@ class ConvolutionalTextModel(BaseNetwork):
 
 
 class ConvolutionalText(ModelWrangler):
-    """Dense Autoencoder
-    """
-    def __init__(self, in_size=10, **kwargs):
+    """Dense Autoencoder"""
+
+    def __init__(self, **kwargs):
         super(ConvolutionalText, self).__init__(
             model_class=ConvolutionalTextModel,
-            in_size=in_size,
             **kwargs)

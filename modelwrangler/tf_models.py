@@ -460,7 +460,7 @@ class BaseNetwork(object):
 
     @staticmethod
     def make_onehot_encode_layer(in_layer, max_int):
-        """return a layer that one-hot encodes an int layer
+        """Return a layer that one-hot encodes an int layer
 
         Args:
             in_layer: A layer consisting of integer values
@@ -479,7 +479,7 @@ class BaseNetwork(object):
 
     @staticmethod
     def make_onehot_decode_layer(in_layer):
-        """return a layer takes one-hot encoded layer to int
+        """Return a layer takes one-hot encoded layer to int
         Args:
             in_layer: A of one-hot endcoded values
 

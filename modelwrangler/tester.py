@@ -31,10 +31,10 @@ class ModelTester(object):
 
     def __init__(self, mw_model_class):
         self.model_class = mw_model_class
-        self.test_loss(num_samples=10)
-        self.test_trainable(num_samples=10)
+        self.test_loss(num_samples=40)
+        self.test_trainable(num_samples=40)
 
-    def test_loss(self, num_samples=10):
+    def test_loss(self, num_samples=40):
         """Test that the loss is non-zero"""
 
         model = self.model_class()
@@ -42,7 +42,8 @@ class ModelTester(object):
         in_shape, out_shape = _get_shapes(model.tf_mod)
 
         dummy_input = _make_dummy_input(in_shape, num_samples)
-        dummy_output = 0.5 * np.ones([num_samples] + out_shape)
+        dummy_output = np.ones([num_samples] + out_shape)
+        dummy_output[::2, ...] = 0.0
 
         feed_dict = make_data_dict(
             model.tf_mod,
@@ -58,17 +59,17 @@ class ModelTester(object):
         else:
             print("Model error not equal to 0. That's a good thing.")
 
-
-    def test_trainable(self, num_samples=10):
+    def test_trainable(self, num_samples=40):
         """Test that all params reachable via backprop"""
 
         model = self.model_class()
 
         in_shape, out_shape = _get_shapes(model.tf_mod)
-        dummy_input = _make_dummy_input(in_shape, num_samples)
-        dummy_output = 0.5 * np.ones([num_samples] + out_shape)
 
-        model.initialize()
+        dummy_input = _make_dummy_input(in_shape, num_samples)
+        dummy_output = np.ones([num_samples] + out_shape)
+        dummy_output[::2, ...] = 0.0
+
         before_vals = [
             model.sess.run(var)
             for var in model.tf_mod.graph.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
@@ -82,8 +83,8 @@ class ModelTester(object):
         ]
 
         something_changed = False
-        for b, a in zip(before_vals, after_vals):
-            if (b != a).any():
+        for before, after in zip(before_vals, after_vals):
+            if (before != after).any():
                 something_changed = True
                 break
 

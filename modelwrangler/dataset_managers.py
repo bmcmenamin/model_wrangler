@@ -283,21 +283,30 @@ class TextDataManager(CategoricalDataManager):
     """Class for handling text samples"""
 
     def __init__(self, X, y, pad_len=128, holdout_prop=None, good_chars=None):
-        """Initialize this with X as a list of strings and y as a list of outputs"""
+        """Initialize this with X as a list of strings and y as a list of outputs
+        can be initialized with X as a list of strings and y as a list of outputs
+        or arrays like normal
+        """
 
         self.tp = TextProcessor(good_chars=good_chars)
-        
-        X_padded = np.vstack([
-            self.tp.string_to_ints(x, pad_len=pad_len)
-            for x in X
-        ])
 
-        y = np.vstack(y)
+        both_inputs_are_lists = isinstance(X, list) and isinstance(y, list)
+        string_input = both_inputs_are_lists and isinstance(X[0], str)
+
+        if string_input:
+            X_in = np.vstack([
+                self.tp.string_to_ints(x, pad_len=pad_len)
+                for x in X
+            ])
+            y = np.vstack(y)
+
+        else:
+            X_in = X
 
         super(TextDataManager, self).__init__(
-            X_padded, y,
-            categorical=True,
-            holdout_prop=holdout_prop)
+            X_in, y,
+            holdout_prop=holdout_prop
+        )
 
 
 class TimeseriesDataManager(DatasetManager):

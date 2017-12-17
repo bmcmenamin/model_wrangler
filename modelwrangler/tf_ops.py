@@ -43,7 +43,7 @@ def make_data_dict(tf_model, x_data, y_data, is_training=False):
     if is_training is not None:
         data_dict[tf_model.is_training] = is_training
 
-    if isinstance(x_data, list):
+    if isinstance(tf_model.input, list):
         for input_layer, input_data in zip(tf_model.input, x_data):
             data_dict[input_layer] = input_data
     elif x_data is not None:
@@ -190,11 +190,11 @@ class TextProcessor(object):
         if pad_len is not None:
             char_list = char_list[:pad_len]
 
-        int_list = [self.char_to_int.get(c, self.missing_char_idx)  for c in char_list]
+        int_list = [self.char_to_int.get(c, self.missing_char_idx) for c in char_list]
 
         char_len = len(char_list)
         if pad_len is not None and char_len < pad_len:
-            pad_size = char_len - pad_len
+            pad_size = pad_len - char_len
             int_list.extend([self.pad_char_idx] * pad_size)
 
         return int_list
@@ -205,4 +205,3 @@ class TextProcessor(object):
         char_list = [self.int_to_char[c] for c in in_ints if c is not self.pad_char_idx]
         out_string = ''.join(char_list)
         return out_string
-

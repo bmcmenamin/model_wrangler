@@ -220,7 +220,7 @@ class ModelWrangler(object):
 
         dataset = self.tf_mod.DATA_CLASS(
             input_x, target_y,
-            **self.params
+            holdout_prop=self.params.holdout_prop
         )
 
         try:

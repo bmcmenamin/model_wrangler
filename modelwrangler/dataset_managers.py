@@ -5,20 +5,14 @@
 
 import sys
 import logging
+
 import random
+
 from collections import Iterable
 
-if sys.version_info.major == 2:
-    from itertools import izip_longest as zip_longest
-    from itertools import izip as zip
-elif sys.version_info.major == 3:
-    from itertools import zip_longest
-else:
-    raise ValueError('wtf?!?')
+from abc import ABC, abstractmethod
 
 import numpy as np
-
-from .tf_ops import TextProcessor
 
 LOGGER = logging.getLogger(__name__)
 h = logging.StreamHandler(sys.stdout)
@@ -29,306 +23,339 @@ LOGGER.addHandler(h)
 LOGGER.setLevel(logging.DEBUG)
 
 
-def random_chunk_generator(iterable, block_size):
-    """Collect data into fixed-length chunks or blocks
-    
-    grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
-    https://docs.python.org/3/library/itertools.html
+class BaseDatasetManager(ABC):
     """
-    random.shuffle(iterable)
-    args = [iter(iterable)] * block_size
-    return zip_longest(*args, fillvalue=None)
+    Abstract class used to read in datasets and serve up data samples
+    for batched training and validation.
 
-
-def pad_list(in_list, pad_size):
+    The training method will use `get_next_batch` and `get_next_holdout_batch` 
+    to pull samples of data out of this manager, so you'll want to
+    redefine those for new datasets types
     """
-    Make a list a little longer by appending a randomly sampled
-    items from itselt
-    """
-    new_list = list(in_list)
-    pad_values = np.random.choice(in_list, pad_size, replace=True)
-    new_list.extend(pad_values)
-    return new_list
 
+    @staticmethod
+    def _force_to_generators(x_in):
+        """Force an input to be a generator"""
 
-def get_groups(output_data):
-    """
-    Given a dataset of output variables, figure out how many
-    distinct groups/categories occur, and create a dict that maps
-    each category (as a tuple) to indices where it is found
-    """
-    group_to_idx = {}
+        if isinstance(x_in, np.ndarray):
+            if len(x_in.shape) == 1:
+                x_in = x_in.reshape(-1, 1)
+            return (row for row in x_in)
 
-    for idx in range(output_data.shape[0]):
-        group = tuple(output_data[idx, :])
+        elif isinstance(x_in, Iterable):
+            return (row for row in x_in)
 
-        if group in group_to_idx:
-            group_to_idx[group].append(idx)
         else:
-            group_to_idx[group] = [idx]
-    return group_to_idx
+            raise AttributeError('Input is not an array or an Iterable')
+
+    def _shuffle_data(self, X, Y):
+        """Suffle input/output sample order"""
+
+        new_order = list(range(self.cache_size))
+        random.shuffle(new_order)
+
+        X = [[x[i] for i in new_order] for x in X]
+        Y = [[y[i] for i in new_order] for y in Y]
+
+        return X, Y
+
+    def _yield_batches(self, X, Y, batch_size):
+        for idx in range(0, self.cache_size, batch_size):
+            X_batch = [x[idx:(idx + batch_size)] for x in X]
+            Y_batch = [y[idx:(idx + batch_size)] for y in Y]
+            yield X_batch, Y_batch
+
+    def _combine_list_of_generators(self, gen_list):
+        """Turn a list of generators into a single generator
+        that returns a list of samples"""
+
+        out_list = [[] for _ in gen_list]
+
+        for _ in range(self.cache_size):
+            for gen, out in zip(gen_list, out_list):
+                out.append(next(gen))
+        yield out_list
+
+    def __init__(self, X, Y, X_ho, Y_ho, cache_size=2056):
+        """
+        Args:
+          X: is a list of (num_samples x input_dimension) arrays and/or iterables
+          Y: is a list of (num_samples x output_dimension) arrays and/or iterables
+          X_ho, Y_ho: are the same thing, but for hold-out validation data
+
+          cache_size: is the number of samples to cache internally
+            from the input generators. This list should be larger than the
+            batch sizes used in training because it's what gets randomly
+            shuffled across epochs
+        """
+
+        self.num_inputs = len(X)
+        self.num_outputs = len(Y)
+        self.cache_size = 2056
+
+        LOGGER.info('Dataset has %d inputs', self.num_inputs)
+        LOGGER.info('Dataset has %d outputs', self.num_outputs)
+
+        self.X = self._combine_list_of_generators(
+            [self._force_to_generators(x) for x in X]
+        )
+
+        self.Y = self._combine_list_of_generators(
+            [self._force_to_generators(y) for y in Y]
+        )
+
+        self.X_ho = self._combine_list_of_generators(
+            [self._force_to_generators(x) for x in X_ho]
+        )
+
+        self.Y_ho = self._combine_list_of_generators(
+            [self._force_to_generators(y) for y in Y_ho]
+        )
+
+    @abstractmethod
+    def get_next_batch(self, batch_size=32):
+        """
+        This generator should yield batches of training data
+
+        Args:
+            batch_size: int for number of samples in batch
+        Yields:
+            X, Y: lists of input/output samples
+        """
+        yield [1], [1]
+
+    @abstractmethod
+    def get_next_holdout_batch(self, batch_size=32):
+        """
+        This generator should yield batches of validation data
+
+        Args:
+            batch_size: int for number of samples in batch
+        Yields:
+            X, Y: lists of input/output samples
+        """
+        yield [2], [2]
 
 
-def random_split_list(in_list, split_proportion):
-    """Randomly divide list into two parts"""
+class DatasetManager(BaseDatasetManager):
+    """Just a plain ol' vanilla Dataset Manager that returns
+    batches of data in nearly-random order"""
 
-    if split_proportion >= 1.0 or split_proportion < 0.0:
-        raise ValueError(
-            'split_proportion should be in interval (0, 1.0],',
-            'but you have {}'.format(split_proportion)
+
+    def get_next_batch(self, batch_size=32):
+        """
+        This generator should yield batches of training data
+
+        Args:
+            batch_size: int for number of samples in batch
+        Yields:
+            X, Y: lists of input/output samples
+        """
+
+        for X, Y in zip(self.X, self.Y):
+
+            X, Y = self._shuffle_data(X, Y)
+            for x, y in self._yield_batches(X, Y, batch_size):
+                yield x, y
+
+    def get_next_holdout_batch(self, batch_size=32):
+        """
+        This generator should yield batches of validation data
+
+        Args:
+            batch_size: int for number of samples in batch
+        Yields:
+            X, Y: lists of input/output samples
+        """
+
+        for X, Y in zip(self.X_ho, self.Y_ho):
+
+            X, Y = self._shuffle_data(X, Y)
+            for x, y in self._yield_batches(X, Y, batch_size):
+                yield x, y
+
+
+class DatasetManager(BaseDatasetManager):
+    """Dataset Manager for handling sequential inputs like
+    timeseries or text sequences in an RNN"""
+
+
+    def get_next_batch(self, batch_size=32):
+        """
+        This generator should yield batches of training data
+
+        Args:
+            batch_size: int for number of samples in batch
+        Yields:
+            X, Y: lists of input/output samples
+        """
+
+        for X, Y in zip(self.X, self.Y):
+
+            for x, y in self._yield_batches(X, Y, batch_size):
+                yield x, y
+
+    def get_next_holdout_batch(self, batch_size=32):
+        """
+        This generator should yield batches of validation data
+
+        Args:
+            batch_size: int for number of samples in batch
+        Yields:
+            X, Y: lists of input/output samples
+        """
+
+        for X, Y in zip(self.X_ho, self.Y_ho):
+
+            for x, y in self._yield_batches(X, Y, batch_size):
+                yield x, y
+
+
+class BalancedDatasetManager(BaseDatasetManager):
+    """Balance the datasets so there are equal numbers of
+    positive and negative classes for training
+
+    positive classes are defined using by `positive_classes`, which
+    is a list with an item corresponding to each output in Y. The ith item
+    in the list will be used to determine whether the sample in the ith
+    output is in the positive class. A sample is labelled as 'positive' is
+    *any* of its outputs are positive-class.
+
+    The list can contain:
+        - a function that returns a bool
+        - a list or set of 'allowed' values
+        - a None indicating that the output is not used to 
+            determine pos/neg class
+    """
+
+    def _setup_positive_class_def(self, positive_classes):
+        """Make sure the positive class definition is correct"""
+
+        if len(positive_classes) != self.num_outputs:
+            raise ValueError(
+                'Positive classes defined for {} outputs '
+                'but the data has {} outputs'.format(
+                    len(positive_classes),
+                    self.num_outputs
+                )
             )
 
-    cutpoint = int(len(in_list) * split_proportion)
-    random.shuffle(list(in_list))
+        for idx, func in enumerate(positive_classes):
 
-    list_0 = in_list[cutpoint:]
-    list_1 = in_list[:cutpoint]
-    return list_0, list_1
+            if func is None:
+                positive_classes[idx] = lambda x: False
 
+            elif isinstance(func, set) is None:
+                positive_classes[idx] = lambda x: x in func
 
-def flatten_lists(list_of_lists):
-    """Recursively flatten a list of lists"""
+            elif isinstance(func, list) is None:
+                positive_classes[idx] = lambda x: x in set(func)
 
-    if not isinstance(list_of_lists, Iterable):
-        return [list_of_lists]
-
-    flat = []
-    for item in list_of_lists:
-        flat.extend(flatten_lists(item))
-
-    return flat
-
-
-class DatasetManager(object):
-    """
-    Load a dataset and manage how sample holdout and how samples are batch'd
-    for model training
-
-    Initialize with arrays:
-     `X` is num_samples by input_dimension
-     `y` is num_samples by output_dimension
-     `categorical` is a bool that tells you whether the dataset has categorical
-      data that we can use for stratified sampling [default: True]
-     `holdout_prop` is a float that tells us what proportion of data to hold out
-      for validation
-
-    The training method will use `get_batches` to pull samples of data out of this
-    manager, so you'll want to redefine that for new datasets types
-    """
-
-    def __init__(self, X, y, categorical=False, holdout_prop=0.0):
-
-        if X.shape[0] != y.shape[0]:
-            raise ValueError(
-                'Input array and output array have different numbers',
-                'of samples: ({}, {})'.format(X.shape[0], y.shape[1])
+            elif not hasattr(func, '__call__'):
+                raise AttributeError(
+                    'Positive class definition {}, ({}) is not valid. '
+                    'Must be either None, a callable function or a list/set of '
+                    'allowable values'
+                    .format(idx, func)
                 )
 
-        self.X = X
-        self.y = y
+        return positive_classes
 
-        if len(self.y.shape) == 1:
-            self.y = self.y.reshape(-1, 1)
 
-        LOGGER.info('Input data size: %s', str(X.shape))
+    def _find_positive_class_samples(self, positive_classes, data_in):
+        """Return a list of booleans indicating whether a particular
+        sample is in the positive class"""
 
-        if not holdout_prop:
-            holdout_prop = 0.0
+        pos_idx = [
+            any(sample) for sample in
+            zip(*[map(func, data) for func, data in zip(positive_classes, data_in)])
+        ]
 
-        self.groups = {}
-        self.groups_holdout = {}
+        return pos_idx
 
-        if categorical:
-            self.groups = get_groups(self.y)
-            LOGGER.info('Input has %d groups', len(self.groups))
-        else:
-            self.groups = {None: range(X.shape[0])}
-
-        for grp in self.groups:
-            idx_list = self.groups[grp]
-            idx_list0, idx_list1 = random_split_list(idx_list, holdout_prop)
-            self.groups[grp] = idx_list0
-            self.groups_holdout[grp] = idx_list1
-
-        self.nsamp_train = sum([len(g) for g in self.groups.values()])
-        self.nsamp_holdout = sum([len(g) for g in self.groups_holdout.values()])
-        LOGGER.info('Num training samples %d', self.nsamp_train)
-        LOGGER.info('Num holdout samples %d', self.nsamp_holdout)
-
-    def get_batches(self, pos_classes=None, batch_size=256, **kwargs):
+    @staticmethod
+    def pad_list(in_list, pad_size):
         """
-        This function looks at whether you've sepcifid positive classes to figure
-        out if you want balanced or stratified categorical sampling
+        Make a list a longer by appending randomly sampled
+        items from itself
         """
-        return self.random_batches(batch_size=batch_size)
+        new_list = list(in_list)
+        pad_values = np.random.choice(in_list, pad_size, replace=True)
+        new_list.extend(pad_values)
+        return new_list
 
-    def _return_idx(self, idx):
-        idx = [i for i in idx if i is not None]
-        if idx:
-            subset_X = np.take(self.X, idx, axis=0)
-            subset_y = np.take(self.y, idx, axis=0)
-            return subset_X, subset_y
-
-    def get_holdout_samples(self):
-        """Return the holdout data"""
-
-        all_idx = flatten_lists(self.groups_holdout.values())
-        return self._return_idx(all_idx)
-
-    def random_batches(self, batch_size=256):
-        """Generate random batches of size`batch_size`"""
-
-        all_idx = flatten_lists(self.groups.values())
-
-        for batch_idx in random_chunk_generator(all_idx, batch_size):
-            yield self._return_idx(batch_idx)
-
-
-class CategoricalDataManager(DatasetManager):
-    """Turn categorical data into batches"""
-
-    def __init__(self, X, y, holdout_prop=None):
-        super(CategoricalDataManager, self).__init__(
-            X, y,
-            categorical=True,
-            holdout_prop=holdout_prop
-        )
-
-    def get_batches(self, pos_classes=None, batch_size=256, **kwargs):
-        """
-        This function looks at whether you've sepcifid positive classes to figure
-        out if you want balanced or stratified categorical sampling
+    def _shuffle_data(self, X, Y, positive_classes):
+        """Suffle input/output sample order after doing up/downsampling
+        to make sure that the positive/negative classes are equally
+        balanced
         """
 
-        if pos_classes:
-            return self.balanced_batches(pos_classes=pos_classes, batch_size=batch_size)
+        is_pos_bool = self._find_positive_class_samples(positive_classes, Y)
 
-        return self.stratified_batches(batch_size=batch_size)
-
-    def balanced_batches(self, pos_classes=None, batch_size=256):
-        """
-        Generate batches where the groups listed in `pos_classes` occur with the
-        same frequency as all other classes combined. Useful in the case of 
-        class imbalances.
-        """
-
-        pos_samples = []
-        neg_samples = []
-
-        for g in self.groups:
-            if g in pos_classes:
-                pos_samples.extend(self.groups[g])
+        pos_idx = []
+        neg_idx = []
+        for idx, is_pos in enumerate(is_pos_bool):
+            if is_pos:
+                pos_idx.append(idx)
             else:
-                neg_samples.extend(self.groups[g])
-
-        size_diff = len(pos_samples) - len(neg_samples)
-        if size_diff > 0:
-            neg_samples = pad_list(neg_samples, size_diff)
-        elif size_diff < 0:
-            pos_samples = pad_list(pos_samples, -size_diff)
-
-        sample_iterator = zip(
-            random_chunk_generator(neg_samples, batch_size // 2),
-            random_chunk_generator(pos_samples, batch_size // 2)
-            )
-
-        for batch_idx_pair in sample_iterator:
-            batch_idx = flatten_lists(batch_idx_pair)
-            yield self._return_idx(batch_idx)
-
-    def stratified_batches(self, batch_size=256):
-        """Generate batches with stratified sampling of groups"""
-
-        num_batches = int(np.ceil(self.nsamp_train / (1.0*batch_size)))
-
-        group_iters = {}
-        for grp in self.groups:
-            group_iters[grp] = random_chunk_generator(
-                self.groups[grp],
-                len(self.groups[grp]) // num_batches
-            )
-
-        for _ in range(num_batches):
-            batch_idx = flatten_lists(map(next, group_iters.values()))
-            yield self._return_idx(batch_idx)
+                neg_idx.append(idx)
+        num_pos, num_neg = len(pos_idx), len(neg_idx)
 
 
-class SiameseDataManager(CategoricalDataManager):
-    """Turn handle datasets for siamese training"""
-
-    def __init__(self, X_paired, y, holdout_prop=None, categorical=True):
-
-        super(SiameseDataManager, self).__init__(
-            X_paired[0], y,
-            holdout_prop=holdout_prop)
-
-        if X_paired[0].shape != X_paired[1].shape:
-            raise ValueError(
-                'Shapes of siamese inputs are mismatched:',
-                'X_0 {}; X_1 {}'.format(X_paired[0].shape, X_paired[1].shape)
-            )
-
-        self.X_1 = X_paired[1]
-
-    def _return_idx(self, idx):
-        idx = [i for i in idx if i is not None]
-        if idx:
-            subset_X = np.take(self.X, idx, axis=0)
-            subset_X_1 = np.take(self.X_1, idx, axis=0)
-            subset_y = np.take(self.y, idx, axis=0)
-            return [subset_X, subset_X_1], subset_y
-
-
-class TextDataManager(CategoricalDataManager):
-    """Class for handling text samples"""
-
-    def __init__(self, X, y, pad_len=128, holdout_prop=None, good_chars=None):
-        """Initialize this with X as a list of strings and y as a list of outputs
-        can be initialized with X as a list of strings and y as a list of outputs
-        or arrays like normal
-        """
-
-        self.tp = TextProcessor(good_chars=good_chars)
-
-        both_inputs_are_lists = isinstance(X, list) and isinstance(y, list)
-        string_input = both_inputs_are_lists and isinstance(X[0], str)
-
-        if string_input:
-            X_in = np.vstack([
-                self.tp.string_to_ints(x, pad_len=pad_len)
-                for x in X
-            ])
-            y = np.vstack(y)
+        if num_pos == 0 or num_neg == 0:
+            X = [[] for x in X]
+            Y = [[] for y in Y]
 
         else:
-            X_in = X
+            if num_pos > num_neg:
+                neg_idx = self.pad_list(neg_idx, num_pos - num_neg)
+            else:
+                pos_idx = self.pad_list(pos_idx, num_neg - num_pos)
 
-        super(TextDataManager, self).__init__(
-            X_in, y,
-            holdout_prop=holdout_prop
-        )
+            resample_idx = neg_idx + pos_idx
+            random.shuffle(resample_idx)
 
+            X = [[x[i] for i in resample_idx] for x in X]
+            Y = [[y[i] for i in resample_idx] for y in Y]
 
-class TimeseriesDataManager(DatasetManager):
-    """Class for handling timeseries data"""
+        return X, Y
 
-    # TODO: Build this dataset manager
-
-    def __init__(self, ts, holdout_prop=None):
-
-        X, y = self.timeseries_to_trainingpairs(ts)
-
-        # Figure out how to do holdout splitting...
-
-        super(TimeseriesDataManager, self).__init__(
-            X, y,
-            categorical=False,
-            holdout_prop=0.0)
-
-        raise NotImplementedError
-
-    def timeseries_to_trainingpairs(self, timeseries):
+    def get_next_batch(self, positive_classes, batch_size=32):
         """
-        divide a timeseries into X, y training pairs so something like an LSTM
-        can be trained to predict timeseries
+        This generator should yield batches of training data
+
+        Args:
+            positive_classes: list of functions defining the 'positive class'
+                based on each output type
+            batch_size: int for number of samples in batch
+        Yields:
+            X, Y: lists of input/output samples
         """
+
+        positive_classes = self._setup_positive_class_def(positive_classes)
+
+        for X, Y in zip(self.X, self.Y):
+
+            X, Y = self._shuffle_data(X, Y, positive_classes)
+            for x, y in self._yield_batches(X, Y, batch_size):
+                yield x, y
+
+
+    def get_next_holdout_batch(self, positive_classes, batch_size=32):
+        """
+        This generator should yield batches of validation data
+
+        Args:
+            batch_size: int for number of samples in batch
+        Yields:
+            X, Y: lists of input/output samples
+        """
+
+        positive_classes = self._setup_positive_class_def(positive_classes)
+
+        for X, Y in zip(self.X_ho, self.Y_ho):
+
+            X, Y = self._shuffle_data(X, Y, positive_classes)
+            for x, y in self._yield_batches(X, Y, batch_size):
+                yield x, y
+

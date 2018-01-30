@@ -1,6 +1,6 @@
 """This module has the tools that do dataset management"""
 
-# C'mon pylint, X and y is a perfectly acceptable names here...
+# C'mon pylint, X and Y is a perfectly acceptable names here...
 # pylint: disable=C0103
 
 import sys
@@ -81,7 +81,6 @@ class BaseDatasetManager(ABC):
         Args:
           X: is a list of (num_samples x input_dimension) arrays and/or iterables
           Y: is a list of (num_samples x output_dimension) arrays and/or iterables
-          X_ho, Y_ho: are the same thing, but for hold-out validation data
 
           cache_size: is the number of samples to cache internally
             from the input generators. This list should be larger than the
@@ -104,14 +103,6 @@ class BaseDatasetManager(ABC):
             [self._force_to_generators(y) for y in Y]
         )
 
-        self.X_ho = self._combine_list_of_generators(
-            [self._force_to_generators(x) for x in X_ho]
-        )
-
-        self.Y_ho = self._combine_list_of_generators(
-            [self._force_to_generators(y) for y in Y_ho]
-        )
-
     @abstractmethod
     def get_next_batch(self, batch_size=32):
         """
@@ -124,17 +115,6 @@ class BaseDatasetManager(ABC):
         """
         yield [1], [1]
 
-    @abstractmethod
-    def get_next_holdout_batch(self, batch_size=32):
-        """
-        This generator should yield batches of validation data
-
-        Args:
-            batch_size: int for number of samples in batch
-        Yields:
-            X, Y: lists of input/output samples
-        """
-        yield [2], [2]
 
 
 class DatasetManager(BaseDatasetManager):
@@ -158,21 +138,6 @@ class DatasetManager(BaseDatasetManager):
             for x, y in self._yield_batches(X, Y, batch_size):
                 yield x, y
 
-    def get_next_holdout_batch(self, batch_size=32):
-        """
-        This generator should yield batches of validation data
-
-        Args:
-            batch_size: int for number of samples in batch
-        Yields:
-            X, Y: lists of input/output samples
-        """
-
-        for X, Y in zip(self.X_ho, self.Y_ho):
-
-            X, Y = self._shuffle_data(X, Y)
-            for x, y in self._yield_batches(X, Y, batch_size):
-                yield x, y
 
 
 class DatasetManager(BaseDatasetManager):
@@ -191,21 +156,6 @@ class DatasetManager(BaseDatasetManager):
         """
 
         for X, Y in zip(self.X, self.Y):
-
-            for x, y in self._yield_batches(X, Y, batch_size):
-                yield x, y
-
-    def get_next_holdout_batch(self, batch_size=32):
-        """
-        This generator should yield batches of validation data
-
-        Args:
-            batch_size: int for number of samples in batch
-        Yields:
-            X, Y: lists of input/output samples
-        """
-
-        for X, Y in zip(self.X_ho, self.Y_ho):
 
             for x, y in self._yield_batches(X, Y, batch_size):
                 yield x, y
@@ -260,7 +210,6 @@ class BalancedDatasetManager(BaseDatasetManager):
                 )
 
         return positive_classes
-
 
     def _find_positive_class_samples(self, positive_classes, data_in):
         """Return a list of booleans indicating whether a particular
@@ -335,25 +284,6 @@ class BalancedDatasetManager(BaseDatasetManager):
         positive_classes = self._setup_positive_class_def(positive_classes)
 
         for X, Y in zip(self.X, self.Y):
-
-            X, Y = self._shuffle_data(X, Y, positive_classes)
-            for x, y in self._yield_batches(X, Y, batch_size):
-                yield x, y
-
-
-    def get_next_holdout_batch(self, positive_classes, batch_size=32):
-        """
-        This generator should yield batches of validation data
-
-        Args:
-            batch_size: int for number of samples in batch
-        Yields:
-            X, Y: lists of input/output samples
-        """
-
-        positive_classes = self._setup_positive_class_def(positive_classes)
-
-        for X, Y in zip(self.X_ho, self.Y_ho):
 
             X, Y = self._shuffle_data(X, Y, positive_classes)
             for x, y in self._yield_batches(X, Y, batch_size):

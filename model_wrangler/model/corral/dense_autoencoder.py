@@ -1,124 +1,109 @@
 """Module sets up Dense Autoencoder model"""
 
+# pylint: disable=R0914
+
 import tensorflow as tf
 
-from modelwrangler.model_wrangler import ModelWrangler
-import modelwrangler.tf_ops as tops
-from modelwrangler.tf_models import BaseNetworkParams, BaseNetwork, LayerConfig
-
-class DenseAutoencoderParams(BaseNetworkParams):
-    """Dense autoencoder params
-    """
-
-    LAYER_PARAM_TYPES = {
-        "encode_params": LayerConfig,
-        "decode_params": LayerConfig,
-        "bottleneck_params": LayerConfig,
-        "output_params": LayerConfig,
-    }
-
-    MODEL_SPECIFIC_ATTRIBUTES = {
-        "name": "autoenc",
-        "in_size": 10,
-        "encode_nodes": [5, 5],
-        "encode_params": {
-            "dropout_rate": 0.1
-        },
-        "decode_nodes": [5, 5],
-        "decode_params": {
-            "dropout_rate": None
-        },
-        "bottleneck_dim": 3,
-        "bottleneck_params": {
-            "dropout_rate": None
-        },
-        "output_params": {
-            "dropout_rate": None,
-            "activation": None,
-            "act_reg": None,
-        }
-    }
+from model_wrangler.architecture import BaseArchitecture
+from model_wrangler.model.layers import append_dropout, append_batchnorm, append_dense
+from model_wrangler.model.losses import loss_mse
 
 
-class DenseAutoencoderModel(BaseNetwork):
-    """Dense autoencoder model
-    """
+class DenseAutoencoderModel(BaseArchitecture):
+    """Dense autoencoder model"""
 
-    # pylint: disable=too-many-instance-attributes
-
-    PARAM_CLASS = DenseAutoencoderParams
 
     def setup_layers(self, params):
-        """Build all the model layers
-        """
+        """Build all the model layers"""
 
         #
-        # Input and encoding layers
+        # Load params
         #
-        encode_layers = [
-            tf.placeholder(
-                "float",
-                name="input",
-                shape=[None, params.in_size]
-                )
+
+        in_sizes = params.get('in_sizes', [])
+        encoding_params = params.get('encoding_params', [])
+        embed_params = params.get('embed_params', {})
+        decoding_params = params.get('decoding_params', [])
+        out_sizes = params.get('out_sizes', [])
+
+        #
+        # Build model
+        #
+
+        in_layers = [
+            tf.placeholder("float", name="input_{}".format(idx), shape=[None, in_size])
+            for idx, in_size in enumerate(in_sizes)
         ]
 
-        for idx, num_nodes in enumerate(params.encode_nodes):
-            encode_layers.append(
-                self.make_dense_layer(
-                    encode_layers[-1],
-                    num_nodes,
-                    'encode_{}'.format(idx),
-                    params.encode_params
-                    )
-            )
+        layer_stack = []
 
-        #
-        # Bottleneck and decoding layers
-        #
-        decode_layers = [
-            self.make_dense_layer(
-                encode_layers[-1],
-                params.bottleneck_dim,
-                'bottleneck',
-                params.bottleneck_params
+        # Encoding layers
+        for idx, layer_param in enumerate(encoding_params):
+            with tf.name_scope('encoding_layer_{}'.format(idx)):
+                layer_stack.append(
+                    append_dense(self, layer_stack[-1], layer_param, 'dense')
+                    )
+
+                layer_stack.append(
+                    append_batchnorm(self, layer_stack[-1], layer_param, 'batchnorm')
+                    )
+
+                layer_stack.append(
+                    append_dropout(self, layer_stack[-1], layer_param, 'dropout')
+                    )
+
+        # Bottleneck
+        with tf.name_scope('bottleneck_layer'):
+            layer_stack.append(
+                append_dense(self, layer_stack[-1], embed_params, 'dense')
                 )
+
+            layer_stack.append(
+                append_batchnorm(self, layer_stack[-1], embed_params, 'batchnorm')
+                )
+
+            layer_stack.append(
+                append_dropout(self, layer_stack[-1], embed_params, 'dropout')
+                )
+
+        # Decoding layers
+        for idx, layer_param in enumerate(decoding_params):
+            with tf.name_scope('decdoding_layer{}'.format(idx)):
+                layer_stack.append(
+                    append_dense(self, layer_stack[-1], layer_param, 'dense')
+                    )
+
+                layer_stack.append(
+                    append_batchnorm(self, layer_stack[-1], layer_param, 'batchnorm')
+                    )
+
+                layer_stack.append(
+                    append_dropout(self, layer_stack[-1], layer_param, 'dropout')
+                    )
+
+        out_layer_preact = [
+            tf.placeholder("float", name="output_{}".format(idx), shape=[None, out_size])
+            for idx, out_size in enumerate(out_sizes)
         ]
 
-        for idx, num_nodes in enumerate(params.decode_nodes):
-            decode_layers.append(
-                self.make_dense_layer(
-                    decode_layers[-1],
-                    num_nodes,
-                    'decode_{}'.format(idx),
-                    params.decode_params
-                    )
-            )
+        out_layers = [
+            tf.sigmoid(layer, name='output_0') for layer in out_layer_preact
+        ]
 
-        in_layer = encode_layers[0]
+        target_layers = [
+            tf.placeholder("float", name="target_{}".format(idx), shape=[None, out_size])
+            for idx, out_size in enumerate(out_sizes)
+        ]
 
-        target_layer = tf.placeholder(
-            "float",
-            name="target",
-            shape=in_layer.get_shape().as_list()
+        #
+        # Set up loss
+        #
+
+        loss = tf.reduce_sum(
+            [loss_mse(*pair) for pair in zip(target_layers, out_layers)]
         )
 
-        out_layer = tops.fit_to_shape(
-            self.make_dense_layer(
-                decode_layers[-1],
-                params.in_size,
-                'output_layer',
-                params.output_params
-            ),
-            target_layer.get_shape().as_list()
-        )
-
-        loss = tops.loss_mse(
-            target_layer,
-            out_layer
-        )
-
-        return in_layer, out_layer, target_layer, loss
+        return in_layers, out_layers, target_layers, loss
 
 
 class DenseAutoencoder(ModelWrangler):

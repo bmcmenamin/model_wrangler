@@ -1,63 +1,72 @@
-"""Module sets up Linear Regression model"""
+"""Module sets up Logistic Regression model"""
 
+# pylint: disable=R0914
+    
 import tensorflow as tf
 
-from modelwrangler.model_wrangler import ModelWrangler
-import modelwrangler.tf_ops as tops
-from modelwrangler.tf_models import BaseNetworkParams, BaseNetwork
+from model_wrangler.architecture import BaseArchitecture
+from model_wrangler.model.losses import loss_sigmoid_ce
 
-import modelwrangler.dataset_managers as dm
 
-class LogisticRegressionParams(BaseNetworkParams):
-    """Linear regression defaul params
-    """
-    MODEL_SPECIFIC_ATTRIBUTES = {
-        'name': 'logreg',
-        'in_size': 10,
-        'out_size': 1,
-    }
-
-class LogisticRegressionModel(BaseNetwork):
-    """Linear regression model spec
-    """
-
-    # pylint: disable=too-many-instance-attributes
-
-    PARAM_CLASS = LogisticRegressionParams
-    DATA_CLASS = dm.CategoricalDataManager
+class LogisticRegressionModel(BaseArchitecture):
+    """Logistic regression"""
 
     def setup_layers(self, params):
-        """Build all the model layers
-        """
-        in_layer = tf.placeholder(
-            dtype=tf.float32,
-            name="input",
-            shape=[None, params.in_size]
-            )
+        """Build all the model layers"""
 
-        coeff = tf.Variable(tf.ones([params.in_size, 1]), name="coeff")
-        intercept = tf.Variable(tf.zeros([1,]), name="intercept")
+        #
+        # Load params
+        #
 
-        linear_output = tf.add(tf.matmul(in_layer, coeff), intercept, name='linear_output')
-        out_layer = tf.sigmoid(linear_output, name='output')
+        in_sizes = params.get('in_sizes', [])
+        out_sizes = params.get('out_sizes', [])
 
-        target_layer = tf.placeholder(
-            dtype=tf.float32,
-            name="target",
-            shape=[None, params.out_size]
+        #
+        # Build model
+        #
+
+        in_layers = [
+            tf.placeholder("float", name="input_{}".format(idx), shape=[None, in_size])
+            for idx, in_size in enumerate(in_sizes)
+        ]
+
+        with tf.name_scope('model_coeffs'):
+            coeff = tf.Variable(tf.ones(in_sizes[:1]), name="coeff")
+            intercept = tf.Variable(tf.zeros([1,]), name="intercept")
+
+            out_layer_preact = [
+                tf.add(tf.matmul(in_layers[0], coeff), intercept, name="output_preact_0")
+            ]
+
+            out_layers = [
+                tf.sigmoid(layer, name='output_0') for layer in out_layer_preact
+            ]
+
+        target_layers = [
+            tf.placeholder("float", name="target_{}".format(idx), shape=[None, out_size])
+            for idx, out_size in enumerate(out_sizes)
+        ]
+
+        #
+        # Set up loss
+        #
+
+        loss = tf.reduce_sum(
+            [loss_sigmoid_ce(*pair) for pair in zip(out_layer_preact, target_layers)]
         )
 
-        loss = tops.loss_sigmoid_ce(linear_output, target_layer)
+        return in_layers, out_layers, target_layers, loss
 
-        return in_layer, out_layer, target_layer, loss
+    def setup_training_step(self, params):
+        """Set up loss and training step"""
 
-class LogisticRegression(ModelWrangler):
-    """Linear regression modelwrangle
-    """
+        # Import params
+        learning_rate = params.get('learning_rate', 0.1)
 
-    def __init__(self, in_size=10, **kwargs):
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate)
 
-        super(LogisticRegression, self).__init__(
-            model_class=LogisticRegressionModel,
-            in_size=in_size,
-            **kwargs)
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        with tf.control_dependencies(update_ops):
+            train_step = optimizer.minimize(self.loss)
+
+        return train_step

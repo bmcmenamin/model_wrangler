@@ -1,57 +1,68 @@
 """Module sets up Linear Regression model"""
 
+# pylint: disable=R0914
+
 import tensorflow as tf
 
-from modelwrangler.model_wrangler import ModelWrangler
-import modelwrangler.tf_ops as tops
-from modelwrangler.tf_models import BaseNetworkParams, BaseNetwork
+from model_wrangler.architecture import BaseArchitecture
+from model_wrangler.model.losses import loss_mse
 
-class LinearRegressionParams(BaseNetworkParams):
-    """Linear regression defaul params
-    """
-    MODEL_SPECIFIC_ATTRIBUTES = {
-        'name': 'linreg',
-        'in_size': 10,
-        'out_size': 1,
-    }
 
-class LinearRegressionModel(BaseNetwork):
-    """Linear regression model spec
-    """
-
-    # pylint: disable=too-many-instance-attributes
-
-    PARAM_CLASS = LinearRegressionParams
+class LinearRegressionModel(BaseArchitecture):
+    """Linear regression"""
 
     def setup_layers(self, params):
-        """Build all the model layers
-        """
-        in_layer = tf.placeholder(
-            "float",
-            name="input",
-            shape=[None, params.in_size]
-            )
+        """Build all the model layers"""
 
-        coeff = tf.Variable(tf.ones([params.in_size, 1]), name="coeff")
-        intercept = tf.Variable(tf.zeros([1,]), name="intercept")
-        out_layer = tf.add(tf.matmul(in_layer, coeff), intercept, name="output")
+        #
+        # Load params
+        #
 
-        target_layer = tf.placeholder(
-            "float",
-            name="target",
-            shape=[None, params.out_size]
+        in_sizes = params.get('in_sizes', [])
+        out_sizes = params.get('out_sizes', [])
+
+        #
+        # Build model
+        #
+
+        in_layers = [
+            tf.placeholder("float", name="input_{}".format(idx), shape=[None, in_size])
+            for idx, in_size in enumerate(in_sizes)
+        ]
+
+        with tf.name_scope('params'):
+            coeff = tf.Variable(tf.ones(in_sizes[:1]), name="coeff")
+            intercept = tf.Variable(tf.zeros([1,]), name="intercept")
+
+        out_layers = [
+            tf.add(tf.matmul(in_layers[0], coeff), intercept, name="output_0")
+        ]
+
+        target_layers = [
+            tf.placeholder("float", name="target_{}".format(idx), shape=[None, out_size])
+            for idx, out_size in enumerate(out_sizes)
+        ]
+
+        #
+        # Set up loss
+        #
+
+        loss = tf.reduce_sum(
+            [loss_mse(*pair) for pair in zip(out_layers, target_layers)]
         )
 
-        loss = tops.loss_mse(out_layer, target_layer)
+        return in_layers, out_layers, target_layers, loss
 
-        return in_layer, out_layer, target_layer, loss
+    def setup_training_step(self, params):
+        """Set up loss and training step"""
 
-class LinearRegression(ModelWrangler):
-    """Linear regression modelwrangle
-    """
+        # Import params
+        learning_rate = params.get('learning_rate', 0.1)
 
-    def __init__(self, in_size=10, **kwargs):
-        super(LinearRegression, self).__init__(
-            model_class=LinearRegressionModel,
-            in_size=in_size,
-            **kwargs)
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate)
+
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        with tf.control_dependencies(update_ops):
+            train_step = optimizer.minimize(self.loss)
+
+        return train_step

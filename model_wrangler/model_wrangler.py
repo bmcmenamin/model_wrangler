@@ -130,10 +130,9 @@ class ModelWrangler(object):
 
     def _restore_train_params(self):
         # Restore training parameters (if they exist) training params
-        save_root = os.path.join(self.model_params['path'], self.model_params['name'])
 
         try:
-            with open(''.join([save_root, 'training_params.pickle']), 'rb') as file:
+            with open(''.join([self.model_params['path'], 'training_params.pickle']), 'rb') as file:
                 train_params = pickle.load(file)
 
             self.add_train_params(train_params)
@@ -249,16 +248,16 @@ class ModelWrangler(object):
             data_dict = self.make_data_dict(train_in, train_out, is_training=True)
             self.sess.run(self.tf_mod.train_step, feed_dict=data_dict)
 
-            if False: #train_verbose and ((batch_counter % train_verbose_interval) == 0):
+            if train_verbose and ((batch_counter % train_verbose_interval) == 0):
 
                 valid_in, valid_out = next(valid_gen)
                 data_dict = self.make_data_dict(valid_in, valid_out, is_training=False)
 
-                # Write training stats to tensorboard
-                self.tf_mod.tb_writer.add_summary(
-                    self.sess.run(self.tf_mod.tb_stats, feed_dict=data_dict),
-                    batch_counter
-                )
+                ## Write training stats to tensorboard
+                #self.tf_mod.tb_writer.add_summary(
+                #    self.sess.run(self.tf_mod.tb_stats, feed_dict=data_dict),
+                #    batch_counter
+                #)
 
                 # logging elsewhere
                 train_error = self.score(train_in, train_out)

@@ -8,6 +8,7 @@ import logging
 
 import random
 
+from itertools import islice
 from collections import Iterable
 
 from abc import ABC, abstractmethod
@@ -51,7 +52,7 @@ class BaseDatasetManager(ABC):
     def _shuffle_data(self, X, Y):
         """Suffle input/output sample order"""
 
-        new_order = list(range(self.cache_size))
+        new_order = list(range(len(X[0])))
         random.shuffle(new_order)
 
         X = [[x[i] for i in new_order] for x in X]
@@ -60,7 +61,7 @@ class BaseDatasetManager(ABC):
         return X, Y
 
     def _yield_batches(self, X, Y, batch_size):
-        for idx in range(0, self.cache_size, batch_size):
+        for idx in range(0, len(X[0]), batch_size):
             X_batch = [x[idx:(idx + batch_size)] for x in X]
             Y_batch = [y[idx:(idx + batch_size)] for y in Y]
             yield X_batch, Y_batch
@@ -69,14 +70,15 @@ class BaseDatasetManager(ABC):
         """Turn a list of generators into a single generator
         that returns a list of samples"""
 
-        out_list = [[] for _ in gen_list]
 
-        for _ in range(self.cache_size):
-            for gen, out in zip(gen_list, out_list):
-                out.append(next(gen))
+        out_list = [
+            list(islice(gen, self.cache_size))
+            for gen in gen_list
+        ]
+
         yield out_list
 
-    def __init__(self, X, Y, X_ho, Y_ho, cache_size=2056):
+    def __init__(self, X, Y, cache_size=2056):
         """
         Args:
           X: is a list of (num_samples x input_dimension) arrays and/or iterables
@@ -133,14 +135,13 @@ class DatasetManager(BaseDatasetManager):
         """
 
         for X, Y in zip(self.X, self.Y):
-
             X, Y = self._shuffle_data(X, Y)
             for x, y in self._yield_batches(X, Y, batch_size):
                 yield x, y
 
 
 
-class DatasetManager(BaseDatasetManager):
+class SequentialDatasetManager(BaseDatasetManager):
     """Dataset Manager for handling sequential inputs like
     timeseries or text sequences in an RNN"""
 

@@ -7,50 +7,6 @@ from unidecode import unidecode
 
 import tensorflow as tf
 
-#
-# Session config functions
-#
-
-def set_session_params(cfg_params=None):
-    """Set session configuration. Use this to switch between CPU and GPU tasks"""
-
-    if cfg_params is None:
-        cfg_params = {}
-
-    return tf.ConfigProto(**cfg_params)
-
-
-def set_max_threads(sess_cfg, max_threads=None):
-    """Set max threads used in session"""
-
-    if max_threads is None:
-        max_threads = cpu_count()
-
-    sess_cfg.intra_op_parallelism_threads = max_threads
-    sess_cfg.inter_op_parallelism_threads = max_threads
-    sess_cfg.allow_soft_placement = True
-    return sess_cfg
-
-
-def make_data_dict(tf_model, x_data, y_data, is_training=False):
-    """Make a dict of data for feed_dict"""
-
-    data_dict = {}
-
-    if y_data is not None:
-        data_dict[tf_model.target] = y_data
-
-    if is_training is not None:
-        data_dict[tf_model.is_training] = is_training
-
-    if isinstance(tf_model.input, list):
-        for input_layer, input_data in zip(tf_model.input, x_data):
-            data_dict[input_layer] = input_data
-    elif x_data is not None:
-        data_dict[tf_model.input] = x_data
-
-    return data_dict
-
 
 #
 # Text vectorizing tools

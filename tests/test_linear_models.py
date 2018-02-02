@@ -12,10 +12,13 @@ from scipy.stats import zscore
 from sklearn.linear_model import LogisticRegression as sk_LogisticRegression
 from sklearn.linear_model import LinearRegression as sk_LinearRegression
 
-from modelwrangler.corral.linear_regression import LinearRegression
-from modelwrangler.corral.logistic_regression import LogisticRegression
+from model_wrangler.model_wrangler import ModelWrangler
+from model_wrangler.dataset_managers import DatasetManager
 
-from modelwrangler.tester import ModelTester
+from model_wrangler.model.corral.linear_regression import LinearRegressionModel
+from model_wrangler.model.corral.logistic_regression import LogisticRegressionModel
+
+from model_wrangler.model.tester import ModelTester
 
 
 def make_linear_reg_testdata(in_dim=2, n_samp=1000):
@@ -40,33 +43,33 @@ def make_linear_cls_testdata(in_dim=2, n_samp=1000):
     return X, y
 
 
-def compare_scikt_and_tf(sk_class, tf_class, X, y, sk_params={}):
+def compare_scikt_and_tf(sk_model, tf_model, X, y, sk_params={}):
 
-    sk_model = sk_class(**sk_params).fit(X, y.ravel())
+    sk_model = sk_model.fit(X, y.ravel())
     print('Scikit values:')
     print('\t coef: {}'.format(sk_model.coef_.ravel()))
     print('\t int: {}'.format(sk_model.intercept_.ravel()))
 
-
-    tf_model = tf_class(in_size=X.shape[1], num_epochs=50)
+    dm = DatasetManager([X], [y])
+    tf_model.add_data(dm, dm)
 
     print('TF training:')
-    print('\tpre-score: {}'.format(tf_model.score(X, y)))
-    tf_model.train(X, y)
-    print('\tpost-score: {}'.format(tf_model.score(X, y)))
+    print('\tpre-score: {}'.format(tf_model.score([X], [y])))
+    tf_model.train()
+    print('\tpost-score: {}'.format(tf_model.score([X], [y])))
 
     print('TF values:')
-    print('\t coef: {}'.format(tf_model.get_from_model('coeff').ravel()))
-    print('\t int: {}'.format(tf_model.get_from_model('intercept').ravel()))
+    print('\t coef: {}'.format(tf_model.get_from_model('params/coeff_0').ravel()))
+    print('\t int: {}'.format(tf_model.get_from_model('params/intercept_0').ravel()))
 
     try:
         corr = np.mean(
-            zscore(tf_model.predict(X).ravel()) *
+            zscore(tf_model.predict([X])[0].ravel()) *
             zscore(sk_model.predict_proba(X)[:, 1].ravel())
         )
     except AttributeError:
         corr = np.mean(
-            zscore(tf_model.predict(X).ravel()) *
+            zscore(tf_model.predict([X])[0].ravel()) *
             zscore(sk_model.predict(X).ravel())
         )
 
@@ -78,36 +81,58 @@ def test_linear_regr(in_dim=2):
     """Compare tf linear regression to scikit learn
     """
     X, y = make_linear_reg_testdata(in_dim=in_dim)
+    model_params = {
+        'name': 'test_lin',
+        'path': './tests/test_lin',
+        'graph': {
+            'in_sizes': [in_dim], 'out_sizes': [1], 
+        }
+    }
 
     compare_scikt_and_tf(
-        sk_LinearRegression,
-        LinearRegression,
+        sk_LinearRegression(),
+        ModelWrangler(LinearRegressionModel, model_params),
         X, y)
 
 def test_logistic_regr(in_dim=2):
     """Compare tf logistic regression to scikit learn
     """
     X, y = make_linear_cls_testdata(in_dim=in_dim)
+    model_params = {
+        'name': 'test_log',
+        'path': './tests/test_log',
+        'graph': {
+            'in_sizes': [in_dim], 'out_sizes': [1], 
+        }
+    }
 
     compare_scikt_and_tf(
-        sk_LogisticRegression,
-        LogisticRegression,
-        X, y,
-        sk_params={'penalty':'l2', 'C':100.0})
-
+        sk_LogisticRegression(**{'penalty':'l2', 'C':100.0}),
+        ModelWrangler(LogisticRegressionModel, model_params),
+        X, y)
 
 if __name__ == "__main__":
 
+    model_params = {
+        'name': 'test_log',
+        'path': './tests/test_log',
+        'graph': {
+            'in_sizes': [5], 'out_sizes': [1], 
+        }
+    }
 
     print("\n\nunit testing linear regression")
-    ModelTester(LinearRegression)
+    ModelTester(
+        ModelWrangler(LinearRegressionModel, model_params)
+    )
 
     print("\n\ne2e testing linear regression")
     test_linear_regr()
 
-
     print("\n\nunit testing logistic regression")
-    ModelTester(LogisticRegression)
+    ModelTester(
+        ModelWrangler(LogisticRegressionModel, model_params)
+    )
 
     print("\n\ne2e testing logistic regression")
     test_logistic_regr()

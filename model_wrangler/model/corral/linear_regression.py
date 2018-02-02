@@ -31,11 +31,19 @@ class LinearRegressionModel(BaseArchitecture):
         ]
 
         with tf.name_scope('params'):
-            coeff = tf.Variable(tf.ones(in_sizes[:1]), name="coeff")
-            intercept = tf.Variable(tf.zeros([1,]), name="intercept")
+            coeffs = [
+                tf.Variable(tf.ones([size, 1]), name="coeff_{}".format(idx))
+                for idx, size in enumerate(in_sizes)
+            ]
+
+            intercepts = [
+                tf.Variable(tf.zeros([1, ]), name="intercept_{}".format(idx))
+                for idx, _ in enumerate(in_sizes)
+            ]
 
         out_layers = [
-            tf.add(tf.matmul(in_layers[0], coeff), intercept, name="output_0")
+            tf.add(tf.matmul(in_layers[0], coeff), intercept, name="output_{}".format(idx))
+            for idx, (coeff, intercept) in enumerate(zip(coeffs, intercepts))
         ]
 
         target_layers = [

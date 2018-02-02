@@ -9,11 +9,8 @@ from abc import ABC, abstractmethod
 
 import tensorflow as tf
 
-import layers
-import losses
-
-from .tf_ops import loss_sigmoid_ce
-
+import model_wrangler.model.layers as layers
+from model_wrangler.model.losses import loss_sigmoid_ce
 
 LOGGER = logging.getLogger(__name__)
 h = logging.StreamHandler(sys.stdout)
@@ -92,9 +89,9 @@ class BaseArchitecture(ABC):
         graph_params = params.get('graph', {})
         train_params = params.get('training', {})
 
-        self.input = None
-        self.output = None
-        self.target = None
+        self.inputs = None
+        self.outputs = None
+        self.targets = None
         self.loss = None
         self.train_step = None
 
@@ -103,12 +100,12 @@ class BaseArchitecture(ABC):
 
             self.is_training = tf.placeholder("bool", name="is_training")
 
-            self.input, self.output, self.target, self.loss = self.setup_layers(graph_params)
-            self.train_step = self.setup_training(train_params)
+            self.inputs, self.outputs, self.targets, self.loss = self.setup_layers(graph_params)
+            self.train_step = self.setup_training_step(train_params)
 
             self.saver = tf.train.Saver(
-                name=params.name,
-                filename=params.meta_filename,
+                name=params.get('name', 'model'),
+                filename=params.get('meta_filename', 'meta_filename'),
                 pad_step_number=True,
                 max_to_keep=4
             )

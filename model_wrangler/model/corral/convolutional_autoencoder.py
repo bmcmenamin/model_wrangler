@@ -45,15 +45,15 @@ class ConvolutionalAutoencoderModel(BaseArchitecture):
         layer_stack = [in_layer]
 
         layer_stack.append(
+            append_deconv(self, layer_stack[-1], layer_param, 'deconv')
+            )
+
+        layer_stack.append(
             append_unpool(self, layer_stack[-1], layer_param, 'unpool')
             )
 
         layer_stack.append(
             append_unstride(self, layer_stack[-1], layer_param, 'unstride')
-            )
-
-        layer_stack.append(
-            append_deconv(self, layer_stack[-1], layer_param, 'deconv')
             )
 
         return layer_stack[-1]

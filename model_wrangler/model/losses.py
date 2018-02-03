@@ -34,7 +34,7 @@ def loss_sigmoid_ce(observed, actual):
 def loss_softmax_ce(observed, actual):
     """Calculate softmax cross entropy loss"""
 
-    per_sample_loss = tf.nn.softmax_cross_entropy_with_logits(
+    per_sample_loss = tf.nn.softmax_cross_entropy_with_logits_v2(
         labels=actual,
         logits=observed
     )

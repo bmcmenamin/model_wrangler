@@ -261,7 +261,6 @@ class ModelWrangler(object):
         batch_gen = self.training_data.get_next_batch(batch_size=batch_size)
         valid_gen = self.holdout_data.get_next_batch(batch_size=batch_size)
         for batch_counter, (train_in, train_out) in enumerate(batch_gen):
-
             data_dict = self.make_data_dict(train_in, train_out, is_training=True)
             self.sess.run(self.tf_mod.train_step, feed_dict=data_dict)
 
@@ -286,6 +285,9 @@ class ModelWrangler(object):
                 holdout_error = self.score(valid_in, valid_out)
                 LOGGER.info("Batch %d: Training score = %0.6f", batch_counter, train_error)
                 LOGGER.info("Batch %d: Holdout score = %0.6f", batch_counter, holdout_error)
+
+        batch_gen = self.training_data.get_next_batch(batch_size=batch_size)
+
 
     def train(self):
         """

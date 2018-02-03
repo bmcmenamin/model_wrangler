@@ -70,13 +70,18 @@ class BaseDatasetManager(ABC):
         """Turn a list of generators into a single generator
         that returns a list of samples"""
 
-
         out_list = [
             list(islice(gen, self.cache_size))
             for gen in gen_list
         ]
 
         yield out_list
+
+    def _input_to_generators(self, input):
+        gen = self._combine_list_of_generators(
+            [self._force_to_generators(x) for x in input]
+        )
+        return gen
 
     def __init__(self, X, Y, cache_size=2056):
         """
@@ -97,13 +102,9 @@ class BaseDatasetManager(ABC):
         LOGGER.info('Dataset has %d inputs', self.num_inputs)
         LOGGER.info('Dataset has %d outputs', self.num_outputs)
 
-        self.X = self._combine_list_of_generators(
-            [self._force_to_generators(x) for x in X]
-        )
 
-        self.Y = self._combine_list_of_generators(
-            [self._force_to_generators(y) for y in Y]
-        )
+        self.X = X
+        self.Y = Y
 
     @abstractmethod
     def get_next_batch(self, batch_size=32):
@@ -124,7 +125,7 @@ class DatasetManager(BaseDatasetManager):
     batches of data in nearly-random order"""
 
 
-    def get_next_batch(self, batch_size=32, eternal=False):
+    def get_next_batch(self, batch_size=32):
         """
         This generator should yield batches of training data
 
@@ -134,7 +135,10 @@ class DatasetManager(BaseDatasetManager):
             X, Y: lists of input/output samples
         """
 
-        for X, Y in zip(self.X, self.Y):
+        X_gen = self._input_to_generators(self.X)
+        Y_gen = self._input_to_generators(self.Y)
+
+        for X, Y in zip(X_gen, Y_gen):
             X, Y = self._shuffle_data(X, Y)
             for x, y in self._yield_batches(X, Y, batch_size):
                 yield x, y
@@ -146,7 +150,7 @@ class SequentialDatasetManager(BaseDatasetManager):
     timeseries or text sequences in an RNN"""
 
 
-    def get_next_batch(self, batch_size=32, eternal=False):
+    def get_next_batch(self, batch_size=32):
         """
         This generator should yield batches of training data
 
@@ -157,7 +161,10 @@ class SequentialDatasetManager(BaseDatasetManager):
             X, Y: lists of input/output samples
         """
 
-        for X, Y in zip(self.X, self.Y):
+        X_gen = self._input_to_generators(self.X)
+        Y_gen = self._input_to_generators(self.Y)
+
+        for X, Y in zip(X_gen, Y_gen):
             for x, y in self._yield_batches(X, Y, batch_size):
                 yield x, y
 
@@ -270,7 +277,7 @@ class BalancedDatasetManager(BaseDatasetManager):
 
         return X, Y
 
-    def get_next_batch(self, positive_classes, batch_size=32, eternal=False):
+    def get_next_batch(self, positive_classes, batch_size=32):
         """
         This generator should yield batches of training data
 
@@ -284,8 +291,10 @@ class BalancedDatasetManager(BaseDatasetManager):
         """
 
         positive_classes = self._setup_positive_class_def(positive_classes)
+        X_gen = self._input_to_generators(self.X)
+        Y_gen = self._input_to_generators(self.Y)
 
-        for X, Y in zip(self.X, self.Y):
+        for X, Y in zip(X_gen, Y_gen):
             X, Y = self._shuffle_data(X, Y, positive_classes)
             for x, y in self._yield_batches(X, Y, batch_size):
                 yield x, y

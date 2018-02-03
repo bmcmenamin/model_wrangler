@@ -106,6 +106,8 @@ class BaseArchitecture(ABC):
         self.loss = None
         self.train_step = None
 
+        self.embed = None # optional
+
         self.graph = tf.Graph()
         with self.graph.as_default():
 

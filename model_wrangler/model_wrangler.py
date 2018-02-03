@@ -192,6 +192,23 @@ class ModelWrangler(object):
         vals = self.sess.run(self.tf_mod.outputs, feed_dict=data_dict)
         return vals
 
+    def embed(self, input_x):
+        """Get embeddings for an input value, input_x"""
+
+        if self.tf_mod.embed is None:
+            raise AttributeError('the embed layer is not defined in the model')
+
+        data_dict = self.make_data_dict(
+            input_x,
+            None, is_training=False)
+
+        vals = self.sess.run(
+            self.tf_mod.embed,
+            feed_dict=data_dict
+        )
+
+        return vals
+
     def score(self, input_x, target_y, score_func=None):
         """Measure model's current performance
         for a set of input_x and target_y using some scoring function
@@ -253,7 +270,7 @@ class ModelWrangler(object):
                 try:
                     valid_in, valid_out = next(valid_gen)
                 except StopIteration:
-                    valid_gen = self.holdout_data.get_next_batch(batch_size=batch_size, eternal=True)
+                    valid_gen = self.holdout_data.get_next_batch(batch_size=batch_size)
                     valid_in, valid_out = next(valid_gen)
 
                 data_dict = self.make_data_dict(valid_in, valid_out, is_training=False)
@@ -275,7 +292,6 @@ class ModelWrangler(object):
         Run a a bunch of training batches
         on the model using a bunch of input_x, target_y
         """
-
         num_epochs = self.training_params.get('num_epochs', 1)
         try:
             for epoch in range(num_epochs):

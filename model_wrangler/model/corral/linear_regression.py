@@ -30,7 +30,7 @@ class LinearRegressionModel(BaseArchitecture):
             for idx, in_size in enumerate(in_sizes)
         ]
 
-        with tf.name_scope('params'):
+        with tf.variable_scope('params'):
             coeffs = [
                 tf.Variable(tf.ones([size, 1]), name="coeff_{}".format(idx))
                 for idx, size in enumerate(in_sizes)

@@ -40,10 +40,11 @@ def get_param_functions(param_dict):
     """Extract functions for  activation and regularization from
     config params
     """
-
-    activation_func = getattr(tf.nn, param_dict.get('activation', None), None)
-
+   
+    activation_func = getattr(tf.nn, param_dict.get('activation', ''), None)
+   
     _reg = []
+    reg_func = None
     for reg_type, reg_str in param_dict.get('activity_reg', {}).items():
         _reg = getattr(tf.keras.regularizers, reg_type, None)
         if _reg:
@@ -128,7 +129,7 @@ def append_dense(architecture, input_layer, layer_config, name):
         activity_regularizer=reg_func,
         name=name
     )
-    return conv_layer
+    return dense_layer
 
 
 def append_conv(architecture, input_layer, layer_config, name):
@@ -148,7 +149,7 @@ def append_conv(architecture, input_layer, layer_config, name):
         TF layer with convolutions added
     """
 
-    dim = get_layer_dim(input_layer)
+    dim = get_layer_dim(input_layer) - 1
     activation_func, reg_func = get_param_functions(layer_config)
 
     conv_func = CONV_FUNCS[dim]

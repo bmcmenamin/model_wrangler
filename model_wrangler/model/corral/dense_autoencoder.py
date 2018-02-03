@@ -12,7 +12,6 @@ from model_wrangler.model.losses import loss_mse
 class DenseAutoencoderModel(BaseArchitecture):
     """Dense autoencoder model"""
 
-
     def setup_layers(self, params):
         """Build all the model layers"""
 
@@ -35,7 +34,7 @@ class DenseAutoencoderModel(BaseArchitecture):
             for idx, in_size in enumerate(in_sizes)
         ]
 
-        layer_stack = []
+        layer_stack = [in_layers]
 
         # Encoding layers
         for idx, layer_param in enumerate(encoding_params):

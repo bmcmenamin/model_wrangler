@@ -1,6 +1,5 @@
 import tensorflow as tf
 
-
 def layer_logits(layer, pad=1.0e-8):
     """convert probabilities to logits"""
 

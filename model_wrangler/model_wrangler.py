@@ -204,8 +204,7 @@ class ModelWrangler(object):
             score_func = self.tf_mod.loss
         else:
             with self.tf_mod.graph.as_default():
-                score_func = score_func(self.tf_mod.outputs, self.tf_mod.targets)
-
+                score_func = tf.reduce_mean([score_func(*pair) for pair in zip(self.tf_mod.outputs, self.tf_mod.targets)])
         val = score_func.eval(feed_dict=data_dict, session=self.sess)
 
         return val
@@ -250,7 +249,6 @@ class ModelWrangler(object):
             self.sess.run(self.tf_mod.train_step, feed_dict=data_dict)
 
             if train_verbose and ((batch_counter % train_verbose_interval) == 0):
-                print(batch_counter)
 
                 try:
                     valid_in, valid_out = next(valid_gen)

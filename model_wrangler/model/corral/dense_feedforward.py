@@ -6,35 +6,7 @@ import tensorflow as tf
 
 from model_wrangler.architecture import BaseArchitecture
 from model_wrangler.model.layers import append_dropout, append_batchnorm, append_dense
-from model_wrangler.model.losses import loss_sigmoid_ce
-
-"""
-hidden_params = [
-    {
-        'num_units': 10,
-        'bias': True,
-        'activation': 'relu',
-        'activity_reg': {'l1': 0.1},
-        'dropout_rate': 0.1
-    },
-    {
-        'num_units': 10,
-        'bias': True,
-        'activation': 'relu',
-        'activity_reg': {'l1': 0.1}
-        'dropout_rate': 0.1
-    }
-]
-
-embed_params =     {
-    'num_units': 10,
-    'bias': True,
-    'activation': None,
-    'activity_reg': None
-    'dropout_rate': None
-}
-"""
-
+from model_wrangler.model.losses import loss_softmax_ce
 
 class DenseFeedforwardModel(BaseArchitecture):
     """Dense Feedforward"""
@@ -62,9 +34,15 @@ class DenseFeedforwardModel(BaseArchitecture):
             for idx, in_size in enumerate(in_sizes)
         ]
 
-        layer_stack = []
+        flat_input = tf.concat(
+            [tf.contrib.layers.flatten(layer) for layer in in_layers],
+            name='flat_inputs',
+            axis=-1
+        )
+
+        layer_stack = [flat_input]
         for idx, layer_param in enumerate(hidden_params):
-            with tf.name_scope('params_{}'.format(idx)):
+            with tf.variable_scope('params_{}'.format(idx)):
 
                 layer_stack.append(
                     append_dense(self, layer_stack[-1], layer_param, 'dense')
@@ -79,12 +57,13 @@ class DenseFeedforwardModel(BaseArchitecture):
                     )
 
         out_layer_preact = [
-            append_dense(self, layer_stack[-1], embed_params, 'preact')
+            append_dense(self, layer_stack[-1], embed_params, 'preact_{}'.format(idx))
             for idx, out_size in enumerate(out_sizes)
         ]
 
         out_layers = [
-            tf.sigmoid(layer, name='output_0') for layer in out_layer_preact
+            tf.nn.softmax(layer, name='output_{}'.format(idx))
+            for idx, layer in enumerate(out_layer_preact)            
         ]
 
         target_layers = [
@@ -97,7 +76,7 @@ class DenseFeedforwardModel(BaseArchitecture):
         #
 
         loss = tf.reduce_sum(
-            [loss_sigmoid_ce(*pair) for pair in zip(target_layers, out_layer_preact)]
+            [loss_softmax_ce(*pair) for pair in zip(out_layer_preact, target_layers)]
         )
 
         return in_layers, out_layers, target_layers, loss

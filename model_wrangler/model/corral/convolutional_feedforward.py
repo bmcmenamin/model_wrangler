@@ -1,52 +1,13 @@
-"""Module sets up Dense Autoencoder model"""
+"""Module sets up Convolutional Feedforward model"""
 
 import tensorflow as tf
 
-from modelwrangler.model_wrangler import ModelWrangler
-import modelwrangler.tf_ops as tops
-from modelwrangler.tf_models import (
-    BaseNetworkParams, BaseNetwork,
-    ConvLayerConfig, LayerConfig
-)
-
-class ConvolutionalFeedforwardParams(BaseNetworkParams):
-    """Convolutional feedforward params
-    """
-
-    LAYER_PARAM_TYPES = {
-        "conv_params": ConvLayerConfig,
-        "dense_params": LayerConfig,
-        "output_params": LayerConfig,
-    }
-
-    MODEL_SPECIFIC_ATTRIBUTES = {
-        "name": "conv_ff",
-        "in_size": 10,
-        "out_size": 2,
-        "conv_nodes": [5, 5],
-        "conv_params": {
-            "dropout_rate": 0.1,
-            "kernel": 5,
-            "strides": 1,
-            "pool_size": 2
-        },
-
-        "dense_nodes": [5, 5],
-        "dense_params": {
-            "dropout_rate": 0.1,
-            "activation": None,
-            "act_reg": None
-        },
-
-        "output_params": {
-            "dropout_rate": 0.0,
-            "activation": None,
-            "act_reg": None
-        },
-    }
+from model_wrangler.architecture import BaseArchitecture
+from model_wrangler.model.layers import append_dropout, append_batchnorm, append_dense, append_conv
+from model_wrangler.model.losses import loss_softmax_ce
 
 
-class ConvolutionalFeedforwardModel(BaseNetwork):
+class ConvolutionalFeedforwardModel(BaseArchitecture):
     """Convolutional feedforward model that has a
     couple convolutional layers and a couple of dense
     layers leading up to an output
@@ -54,93 +15,71 @@ class ConvolutionalFeedforwardModel(BaseNetwork):
 
     # pylint: disable=too-many-instance-attributes
 
-    PARAM_CLASS = ConvolutionalFeedforwardParams
-
     def setup_layers(self, params):
-        """Build all the model layers
-        """
 
         #
-        # Input layer
+        # Load params
         #
 
-        # Input and encoding layers
-        in_shape = [None]
-        if isinstance(params.in_size, (list, tuple)):
-            in_shape.extend(params.in_size)
-        else:
-            in_shape.extend([params.in_size, 1])
+        in_sizes = params.get('in_sizes', [])
+        hidden_params = params.get('hidden_params', [])
+        embed_params = params.get('embed_params', [])
+        out_sizes = params.get('out_sizes', [])
 
-        layer_stack = [
-            tf.placeholder(
-                "float",
-                name="input",
-                shape=in_shape
-                )
+        #
+        # Build model
+        #
+
+        in_layers = [
+            tf.placeholder("float", name="input_{}".format(idx), shape=[None] + in_size)
+            for idx, in_size in enumerate(in_sizes)
         ]
-        in_layer = layer_stack[0]
 
-        # Add conv layers
-        for idx, num_nodes in enumerate(params.conv_nodes):
-            layer_stack.append(
-                self.make_conv_layer(
-                    layer_stack[-1],
-                    num_nodes,
-                    'conv_{}'.format(idx),
-                    params.conv_params
+        layer_stack = [in_layers[0]]
+
+        for idx, layer_param in enumerate(hidden_params):
+            with tf.variable_scope('params_{}'.format(idx)):
+
+                layer_stack.append(
+                    append_conv(self, layer_stack[-1], layer_param, 'dense')
                     )
-            )
+
+                layer_stack.append(
+                    append_batchnorm(self, layer_stack[-1], layer_param, 'batchnorm')
+                    )
+
+                layer_stack.append(
+                    append_dropout(self, layer_stack[-1], layer_param, 'dropout')
+                    )
 
         # Flatten convolutional layers
         layer_stack.append(
-            tf.contrib.layers.flatten(
-                layer_stack[-1]
-            )
+            tf.contrib.layers.flatten(layer_stack[-1])
         )
 
-        # Add dense layers
-        for idx, num_nodes in enumerate(params.dense_nodes):
-            layer_stack.append(
-                self.make_dense_layer(
-                    layer_stack[-1],
-                    num_nodes,
-                    'dense_{}'.format(idx),
-                    params.dense_params
-                    )
-            )
+        # Add final embedding layers
 
+        out_layer_preact = [
+            append_dense(self, layer_stack[-1], embed_params, 'preact_{}'.format(idx))
+            for idx, out_size in enumerate(out_sizes)
+        ]
 
-        # Output layer is broken into two pieces. The pre/post the application
-        # of the activation function. That's because the loss functions
-        # for cross-entropy rely on the pre-activation scores in preact
+        out_layers = [
+            tf.nn.softmax(layer, name='output_{}'.format(idx))
+            for idx, layer in enumerate(out_layer_preact)            
+        ]
 
-        preact_out_layer, out_layer = self.make_dense_output_layer(
-            layer_stack[-1],
-            params.out_size,
-            params.output_params
+        target_layers = [
+            tf.placeholder("float", name="target_{}".format(idx), shape=[None, out_size])
+            for idx, out_size in enumerate(out_sizes)
+        ]
+
+        #
+        # Set up loss
+        #
+
+        loss = tf.reduce_sum(
+            [loss_softmax_ce(*pair) for pair in zip(out_layer_preact, target_layers)]
         )
 
-        target_layer = tf.placeholder(
-            "float",
-            name="target",
-            shape=[None, params.out_size]
-        )
-
-        if params.output_params.activation in ['sigmoid']:
-            loss = tops.loss_sigmoid_ce(preact_out_layer, target_layer)
-        elif params.output_params.activation in ['softmax']:
-            loss = tops.loss_softmax_ce(preact_out_layer, target_layer)
-        else:
-            loss = tops.loss_mse(target_layer, out_layer)
-
-        return in_layer, out_layer, target_layer, loss
-
-
-class ConvolutionalFeedforward(ModelWrangler):
-    """Dense Autoencoder
-    """
-    def __init__(self, in_size=10, **kwargs):
-        super(ConvolutionalFeedforward, self).__init__(
-            model_class=ConvolutionalFeedforwardModel,
-            in_size=in_size,
-            **kwargs)
+        return in_layers, out_layers, target_layers, loss

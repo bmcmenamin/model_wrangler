@@ -1,5 +1,4 @@
-"""End to end testing on feedforward models
-"""
+"""End to end testing on feedforward models"""
 
 # pylint: disable=C0103
 # pylint: disable=C0325
@@ -87,8 +86,7 @@ CONV_PARAMS = {
 }
 
 def make_testdata(in_dim=100, out_dim=3, n_samp=1000):
-    """Make sample data for linear regression
-    """
+    """Make sample data for linear regression"""
 
     signal = zscore(np.random.randn(n_samp, out_dim), axis=0)
 
@@ -122,7 +120,6 @@ def test_dense_ff():
 
 def test_conv_ff(in_dim=15, out_dim=3):
     """Test dense feedforward"""
-
 
     ff_model = ModelWrangler(ConvolutionalFeedforwardModel, CONV_PARAMS)
 

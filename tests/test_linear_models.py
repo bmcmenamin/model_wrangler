@@ -1,5 +1,4 @@
-"""End to end testing on simple models
-"""
+"""End to end testing on simple linear models"""
 
 # pylint: disable=C0103
 # pylint: disable=C0325
@@ -21,6 +20,25 @@ from model_wrangler.model.corral.logistic_regression import LogisticRegressionMo
 from model_wrangler.model.tester import ModelTester
 
 
+LINEAR_PARAMS = {
+    'name': 'test_lin',
+    'path': './tests/test_lin',
+    'graph': {
+        'in_sizes': [12],
+        'out_sizes': [1], 
+    }
+}
+
+
+LOGISTIC_PARAMS = {
+    'name': 'test_log',
+    'path': './tests/test_log',
+    'graph': {
+        'in_sizes': [12],
+        'out_sizes': [1], 
+    }
+}
+
 def make_linear_reg_testdata(in_dim=2, n_samp=1000):
     """Make sample data for linear regression"""
 
@@ -33,7 +51,7 @@ def make_linear_reg_testdata(in_dim=2, n_samp=1000):
     return X, y
 
 def make_linear_cls_testdata(in_dim=2, n_samp=1000):
-    """Make sample data for linear regression"""
+    """Make sample data for logistic regression"""
 
     signal = zscore(np.random.randn(n_samp, 1), axis=0)
     X = zscore(np.random.randn(n_samp, in_dim), axis=0)
@@ -78,53 +96,31 @@ def compare_scikt_and_tf(sk_model, tf_model, X, y, sk_params={}):
     print('\tr = {:.2f}'.format(corr))
 
 
-def test_linear_regr(in_dim=2):
+def test_linear_regr():
     """Compare tf linear regression to scikit learn"""
 
-    X, y = make_linear_reg_testdata(in_dim=in_dim)
-    model_params = {
-        'name': 'test_lin',
-        'path': './tests/test_lin',
-        'graph': {
-            'in_sizes': [in_dim], 'out_sizes': [1], 
-        }
-    }
+    X, y = make_linear_reg_testdata(in_dim=LINEAR_PARAMS['graph']['in_sizes'][0])
 
     compare_scikt_and_tf(
         sk_LinearRegression(),
-        ModelWrangler(LinearRegressionModel, model_params),
+        ModelWrangler(LinearRegressionModel, LINEAR_PARAMS),
         X, y)
 
-def test_logistic_regr(in_dim=2):
+def test_logistic_regr():
     """Compare tf logistic regression to scikit learn"""
 
-    X, y = make_linear_cls_testdata(in_dim=in_dim)
-    model_params = {
-        'name': 'test_log',
-        'path': './tests/test_log',
-        'graph': {
-            'in_sizes': [in_dim], 'out_sizes': [1], 
-        }
-    }
+    X, y = make_linear_cls_testdata(in_dim=LOGISTIC_PARAMS['graph']['in_sizes'][0])
 
     compare_scikt_and_tf(
         sk_LogisticRegression(**{'penalty':'l2', 'C':100.0}),
-        ModelWrangler(LogisticRegressionModel, model_params),
+        ModelWrangler(LogisticRegressionModel, LOGISTIC_PARAMS),
         X, y)
 
 if __name__ == "__main__":
 
-    model_params = {
-        'name': 'test_log',
-        'path': './tests/test_log',
-        'graph': {
-            'in_sizes': [5], 'out_sizes': [1], 
-        }
-    }
-
     print("\n\nunit testing linear regression")
     ModelTester(
-        ModelWrangler(LinearRegressionModel, model_params)
+        ModelWrangler(LinearRegressionModel, LINEAR_PARAMS)
     )
 
     print("\n\ne2e testing linear regression")
@@ -132,7 +128,7 @@ if __name__ == "__main__":
 
     print("\n\nunit testing logistic regression")
     ModelTester(
-        ModelWrangler(LogisticRegressionModel, model_params)
+        ModelWrangler(LogisticRegressionModel, LOGISTIC_PARAMS)
     )
 
     print("\n\ne2e testing logistic regression")

@@ -2,145 +2,132 @@
 
 import tensorflow as tf
 
-from modelwrangler.model_wrangler import ModelWrangler
-import modelwrangler.tf_ops as tops
-from modelwrangler.tf_models import BaseNetworkParams, BaseNetwork, ConvLayerConfig, LayerConfig
-
-class ConvolutionalAutoencoderParams(BaseNetworkParams):
-    """Dense autoencoder params
-    """
-
-    LAYER_PARAM_TYPES = {
-        "encode_params": ConvLayerConfig,
-        "bottleneck_params": ConvLayerConfig,
-        "decode_params": ConvLayerConfig,
-        "output_params": ConvLayerConfig
-    }
-
-    MODEL_SPECIFIC_ATTRIBUTES = {
-        "name": "conv_autoenc",
-        "in_size": 40,
-        "encode_nodes": [10],
-        "encode_params": {
-            "dropout_rate": 0.1,
-            "kernel": 5,
-            "strides": 1,
-            "pool_size": 2
-        },
-        "bottleneck_dim": 3,
-        "bottleneck_params": {
-            "dropout_rate": None,
-            "kernel": 5,
-            "strides": 1,
-            "pool_size": 1
-        },
-        "decode_nodes": [10],
-        "decode_params": {
-            "dropout_rate": None,
-            "kernel": 5,
-            "strides": 1,
-            "pool_size": 2
-        },
-        "output_params": {
-            "dropout_rate": None,
-            "activation": None,
-            "act_reg": None,
-            "kernel": 1,
-            "strides": 1,
-            "pool_size": 1
-        },
-    }
+from model_wrangler.architecture import BaseArchitecture
+from model_wrangler.model.layers import (
+    append_dropout, append_batchnorm, append_dense,
+    append_conv, append_maxpooling,
+    append_deconv, append_unstride, append_unpool,
+    fit_to_shape
+    )
+from model_wrangler.model.losses import loss_mse
 
 
-class ConvolutionalAutoencoderModel(BaseNetwork):
-    """Dense autoencoder model
-    """
+class ConvolutionalAutoencoderModel(BaseArchitecture):
+    """Convolutionals autoencoder model"""
 
     # pylint: disable=too-many-instance-attributes
 
-    PARAM_CLASS = ConvolutionalAutoencoderParams
+    def _encode_layer(self, in_layer, layer_param):
+
+        layer_stack = [in_layer]
+
+        layer_stack.append(
+            append_conv(self, layer_stack[-1], layer_param, 'conv')
+            )
+
+        layer_stack.append(
+            append_maxpooling(self, layer_stack[-1], layer_param, 'maxpool')
+            )
+
+        layer_stack.append(
+            append_batchnorm(self, layer_stack[-1], layer_param, 'batchnorm')
+            )
+
+        layer_stack.append(
+            append_dropout(self, layer_stack[-1], layer_param, 'dropout')
+            )
+
+        return layer_stack[-1]
+
+
+    def _decode_layer(self, in_layer, layer_param):
+
+        layer_stack = [in_layer]
+
+        layer_stack.append(
+            append_unpool(self, layer_stack[-1], layer_param, 'unpool')
+            )
+
+        layer_stack.append(
+            append_unstride(self, layer_stack[-1], layer_param, 'unstride')
+            )
+
+        layer_stack.append(
+            append_deconv(self, layer_stack[-1], layer_param, 'deconv')
+            )
+
+        return layer_stack[-1]
+
+
 
     def setup_layers(self, params):
-        """Build all the model layers
-        """
 
-        # Input and encoding layers
-        in_shape = [None]
-        if isinstance(params.in_size, (list, tuple)):
-            in_shape.extend(params.in_size)
-        else:
-            in_shape.extend([params.in_size, 1])
+        #
+        # Load params
+        #
 
-        encode_layers = [
-            tf.placeholder(
-                "float",
-                name="input",
-                shape=in_shape
-                )
+        in_sizes = params.get('in_sizes', [])
+        encoding_params = params.get('encoding_params', [])
+        embed_params = params.get('embed_params', [])
+        decoding_params = params.get('decoding_params', [])
+        out_sizes = in_sizes #params.get('out_sizes', [])
+
+        #
+        # Build model
+        #
+
+        in_layers = [
+            tf.placeholder("float", name="input_{}".format(idx), shape=[None] + in_size)
+            for idx, in_size in enumerate(in_sizes)
         ]
 
-        for idx, num_nodes in enumerate(params.encode_nodes):
-            encode_layers.append(
-                self.make_conv_layer(
-                    encode_layers[-1],
-                    num_nodes,
-                    'encode_{}'.format(idx),
-                    params.encode_params
-                    )
+        layer_stack = [in_layers[0]]
+
+        for idx, layer_param in enumerate(encoding_params):
+            with tf.variable_scope('encoding_{}'.format(idx)):
+                layer_stack.append(
+                    self._encode_layer(layer_stack[-1], layer_param)
+                )
+
+        with tf.variable_scope('embedding_layer'):
+
+            # Flatten convolutional layers
+            layer_stack.append(
+                tf.contrib.layers.flatten(layer_stack[-1])
             )
 
-        # Bottleneck and decoding layers
-        decode_layers = [
-            self.make_conv_layer(
-                encode_layers[-1],
-                params.bottleneck_dim,
-                'bottleneck',
-                params.bottleneck_params
+            layer_stack.append(
+                append_dense(self, layer_stack[-1], embed_params, 'embedding')
                 )
+
+            layer_stack.append(
+                tf.expand_dims(layer_stack[-1], -1)
+                )
+
+        for idx, layer_param in enumerate(decoding_params):
+            with tf.variable_scope('decoding_{}'.format(idx)):
+                layer_stack.append(
+                    self._decode_layer(layer_stack[-1], layer_param)
+                )
+
+        # Add final embedding layers
+
+        out_layers = [
+            fit_to_shape(self, layer_stack[-1], {'target_shape': [None] + out_size}, 'recon')
+            for idx, out_size in enumerate(out_sizes)
         ]
 
-        for idx, num_nodes in enumerate(params.decode_nodes):
-            decode_layers.append(
-                self.make_deconv_layer(
-                    decode_layers[-1],
-                    num_nodes,
-                    'decode_{}'.format(idx),
-                    params.decode_params
-                    )
-            )
+        target_layers = [
+            tf.placeholder("float", name="target_{}".format(idx), shape=[None] + out_size)
+            for idx, out_size in enumerate(out_sizes)
+        ]
 
-        # Standardizing the input/output layer names
-        in_layer = encode_layers[0]
+        #
+        # Set up loss
+        #
 
-        target_layer = tf.placeholder(
-            "float",
-            name="target",
-            shape=in_layer.get_shape().as_list()
+        loss = tf.reduce_sum(
+            [loss_mse(*pair) for pair in zip(out_layers, target_layers)]
         )
 
-        out_layer = tops.fit_to_shape(
-            self.make_deconv_layer(
-                decode_layers[-1],
-                1,
-                'output_layer',
-                params.output_params
-            ),
-            target_layer.get_shape().as_list()
-        )
-
-        loss = tops.loss_mse(
-            target_layer,
-            out_layer
-        )
-
-        return in_layer, out_layer, target_layer, loss
-
-
-class ConvolutionalAutoencoder(ModelWrangler):
-    """Convolutional Autoencoder
-    """
-    def __init__(self, in_size=10, **kwargs):
-        super(ConvolutionalAutoencoder, self).__init__(
-            model_class=ConvolutionalAutoencoderModel,
-            in_size=in_size,
-            **kwargs)
+        return in_layers, out_layers, target_layers, loss

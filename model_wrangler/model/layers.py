@@ -42,7 +42,7 @@ def get_param_functions(param_dict):
     """
    
     activation_func = getattr(tf.nn, param_dict.get('activation', ''), None)
-   
+
     _reg = []
     reg_func = None
     for reg_type, reg_str in param_dict.get('activity_reg', {}).items():
@@ -182,7 +182,7 @@ def append_deconv(architecture, input_layer, layer_config, name):
         TF layer with convolutions added
     """
 
-    dim = get_layer_dim(input_layer)    
+    dim = get_layer_dim(input_layer) - 1
     deconv_func = DECONV_FUNCS[dim]
 
     deconv_layer = deconv_func(
@@ -211,7 +211,7 @@ def append_maxpooling(architecture, input_layer, layer_config, name):
         TF layer with max pooling added
     """
 
-    dim = get_layer_dim(input_layer)    
+    dim = get_layer_dim(input_layer) - 1 
     pool_func = POOL_FUNCS[dim]
 
     pool_layer = pool_func(
@@ -237,7 +237,7 @@ def append_unpool(architecture, input_layer, layer_config, name):
         TF layer with un-pooling added
     """
 
-    dim = get_layer_dim(input_layer)    
+    dim = get_layer_dim(input_layer) - 1
     unpool_func = UNPOOL_FUNCS[dim]
 
     pool_size = layer_config.get('pool_size', 1)
@@ -264,7 +264,7 @@ def append_unstride(architecture, input_layer, layer_config, name):
         TF layer with un-stride added
     """
 
-    dim = get_layer_dim(input_layer)        
+    dim = get_layer_dim(input_layer) - 1   
     unstride_func = UNSTRIDE_FUNCS[dim]
 
     unstride_layer = unstride_func(

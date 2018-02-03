@@ -3,7 +3,10 @@
 import tensorflow as tf
 
 from model_wrangler.architecture import BaseArchitecture
-from model_wrangler.model.layers import append_dropout, append_batchnorm, append_dense, append_conv
+from model_wrangler.model.layers import (
+    append_dropout, append_batchnorm, append_dense, append_conv,
+    append_maxpooling
+)
 from model_wrangler.model.losses import loss_softmax_ce
 
 
@@ -14,6 +17,27 @@ class ConvolutionalFeedforwardModel(BaseArchitecture):
     """
 
     # pylint: disable=too-many-instance-attributes
+
+    def _conv_layer(self, in_layer, layer_param):
+        layer_stack = [in_layer]
+
+        layer_stack.append(
+            append_conv(self, layer_stack[-1], layer_param, 'conv')
+            )
+
+        layer_stack.append(
+            append_maxpooling(self, layer_stack[-1], layer_param, 'maxpool')
+            )
+
+        layer_stack.append(
+            append_batchnorm(self, layer_stack[-1], layer_param, 'batchnorm')
+            )
+
+        layer_stack.append(
+            append_dropout(self, layer_stack[-1], layer_param, 'dropout')
+            )
+
+        return layer_stack[-1]
 
     def setup_layers(self, params):
 
@@ -39,18 +63,10 @@ class ConvolutionalFeedforwardModel(BaseArchitecture):
 
         for idx, layer_param in enumerate(hidden_params):
             with tf.variable_scope('params_{}'.format(idx)):
-
                 layer_stack.append(
-                    append_conv(self, layer_stack[-1], layer_param, 'dense')
-                    )
+                    self._conv_layer(layer_stack[-1], layer_param)
+                )
 
-                layer_stack.append(
-                    append_batchnorm(self, layer_stack[-1], layer_param, 'batchnorm')
-                    )
-
-                layer_stack.append(
-                    append_dropout(self, layer_stack[-1], layer_param, 'dropout')
-                    )
 
         # Flatten convolutional layers
         layer_stack.append(

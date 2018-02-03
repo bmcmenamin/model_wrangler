@@ -47,7 +47,7 @@ class ModelTester(object):
         else:
             print("Model error not equal to 0. That's a good thing.")
 
-    def test_trainable(self, num_samples=4000):
+    def test_trainable(self, num_samples=40):
         """Test that all params reachable via backprop"""
 
         self.mw.initialize()
@@ -56,8 +56,9 @@ class ModelTester(object):
         dummy_output = _make_dummy_data(self.out_shape, num_samples)
         for d in dummy_output:
             d[::2, ...] = 0.0
-        dummy_dm = DatasetManager(dummy_input, dummy_output)
-        self.mw.add_data(dummy_dm, dummy_dm)
+        dummy_dm1 = DatasetManager(dummy_input, dummy_output)
+        dummy_dm2 = DatasetManager(dummy_input, dummy_output)
+        self.mw.add_data(dummy_dm1, dummy_dm2)
 
         before_vals = [
             self.mw.sess.run(var)

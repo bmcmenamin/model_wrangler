@@ -22,8 +22,8 @@ from model_wrangler.model.tester import ModelTester
 
 
 def make_linear_reg_testdata(in_dim=2, n_samp=1000):
-    """Make sample data for linear regression
-    """
+    """Make sample data for linear regression"""
+
     signal = zscore(np.random.randn(n_samp, 1), axis=0)
 
     X = zscore(np.random.randn(n_samp, in_dim), axis=0)
@@ -33,8 +33,8 @@ def make_linear_reg_testdata(in_dim=2, n_samp=1000):
     return X, y
 
 def make_linear_cls_testdata(in_dim=2, n_samp=1000):
-    """Make sample data for linear regression
-    """
+    """Make sample data for linear regression"""
+
     signal = zscore(np.random.randn(n_samp, 1), axis=0)
     X = zscore(np.random.randn(n_samp, in_dim), axis=0)
     X += 0.2 * signal
@@ -50,8 +50,9 @@ def compare_scikt_and_tf(sk_model, tf_model, X, y, sk_params={}):
     print('\t coef: {}'.format(sk_model.coef_.ravel()))
     print('\t int: {}'.format(sk_model.intercept_.ravel()))
 
-    dm = DatasetManager([X], [y])
-    tf_model.add_data(dm, dm)
+    dm1 = DatasetManager([X], [y])
+    dm2 = DatasetManager([X], [y])
+    tf_model.add_data(dm1, dm2)
 
     print('TF training:')
     print('\tpre-score: {}'.format(tf_model.score([X], [y])))
@@ -78,8 +79,8 @@ def compare_scikt_and_tf(sk_model, tf_model, X, y, sk_params={}):
 
 
 def test_linear_regr(in_dim=2):
-    """Compare tf linear regression to scikit learn
-    """
+    """Compare tf linear regression to scikit learn"""
+
     X, y = make_linear_reg_testdata(in_dim=in_dim)
     model_params = {
         'name': 'test_lin',
@@ -95,8 +96,8 @@ def test_linear_regr(in_dim=2):
         X, y)
 
 def test_logistic_regr(in_dim=2):
-    """Compare tf logistic regression to scikit learn
-    """
+    """Compare tf logistic regression to scikit learn"""
+
     X, y = make_linear_cls_testdata(in_dim=in_dim)
     model_params = {
         'name': 'test_log',

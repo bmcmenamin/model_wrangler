@@ -37,7 +37,6 @@ class BaseArchitecture(ABC):
     #
     # pylint: disable=too-many-instance-attributes
 
-
     @abstractmethod
     def setup_layers(self, params):
         """Build all the model layers"""
@@ -68,7 +67,13 @@ class BaseArchitecture(ABC):
 
         return in_layers, out_layers, target_layers, loss
 
-    @abstractmethod
+    def setup_tensorboard_tracking(self, tb_log_path):
+        """Set up summary stats to track in tensorboard"""
+
+        tf.summary.scalar('training_loss', self.loss)
+        tb_writer = tf.summary.FileWriter(tb_log_path, self.graph)
+        return tb_writer
+
     def setup_training_step(self, params):
         """Set up loss and training step"""
 
@@ -89,6 +94,12 @@ class BaseArchitecture(ABC):
         graph_params = params.get('graph', {})
         train_params = params.get('training', {})
 
+        meta_filename = os.path.join(
+            os.path.abspath(params['path']),
+            '{}-{}'.format(params['name'], 0)
+        )
+        print(meta_filename)
+
         self.inputs = None
         self.outputs = None
         self.targets = None
@@ -103,9 +114,12 @@ class BaseArchitecture(ABC):
             self.inputs, self.outputs, self.targets, self.loss = self.setup_layers(graph_params)
             self.train_step = self.setup_training_step(train_params)
 
+            self.tb_writer = self.setup_tensorboard_tracking(params['path'])
+            self.tb_stats = tf.summary.merge_all()
+
             self.saver = tf.train.Saver(
-                name=params.get('name', 'model'),
-                filename=params.get('meta_filename', 'meta_filename'),
+                name=params['name'],
+                filename=meta_filename,
                 pad_step_number=True,
                 max_to_keep=4
             )

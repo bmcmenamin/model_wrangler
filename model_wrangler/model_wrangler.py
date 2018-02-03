@@ -114,9 +114,6 @@ class ModelWrangler(object):
         self.sess = self.new_session()
         self.initialize()
 
-    def test_model(self):
-        ModelTester
-
     def add_data(self, training_dataset, holdout_dataset):
         """Add datasets for training/testing"""
         self.training_data = training_dataset
@@ -150,13 +147,16 @@ class ModelWrangler(object):
             pass
 
         # Save model weights
-        self.tf_mod.saver.save(self.sess, save_path=self.model_params['path'], global_step=iteration)
-        self.model_params['meta_filename'] = os.path.join(
-            self.model_params['path'],
-            '{}-{}'.format(self.model_params['name'], iteration)
+        self.model_params['meta_filename'] = self.tf_mod.saver.save(
+            self.sess,
+            save_path=os.path.join(
+                self.model_params['path'],
+                self.model_params['name']
+            ),
+            global_step=iteration
         )
-        # Save model, training parameters
 
+        # Save model parameters, training parameters
         with open(os.path.join(self.model_params['path'], 'model_params.pickle'), 'wb') as file:
             pickle.dump(self.model_params, file)
 
@@ -175,7 +175,8 @@ class ModelWrangler(object):
         # initialize a new model, restore its weights
         new_model = cls(model_params['model_class'], model_params)
 
-        last_checkpoint = tf.train.latest_checkpoint(new_model.model_params[path])
+        #last_checkpoint = tf.train.latest_checkpoint(new_model.model_params[path])
+        last_checkpoint = model_params['meta_filename'] 
         new_model.tf_mod.saver = tf.train.import_meta_graph(last_checkpoint + '.meta')
         new_model.tf_mod.saver.restore(new_model.sess, last_checkpoint)
 
@@ -249,15 +250,21 @@ class ModelWrangler(object):
             self.sess.run(self.tf_mod.train_step, feed_dict=data_dict)
 
             if train_verbose and ((batch_counter % train_verbose_interval) == 0):
+                print(batch_counter)
 
-                valid_in, valid_out = next(valid_gen)
+                try:
+                    valid_in, valid_out = next(valid_gen)
+                except StopIteration:
+                    valid_gen = self.holdout_data.get_next_batch(batch_size=batch_size, eternal=True)
+                    valid_in, valid_out = next(valid_gen)
+
                 data_dict = self.make_data_dict(valid_in, valid_out, is_training=False)
 
-                ## Write training stats to tensorboard
-                #self.tf_mod.tb_writer.add_summary(
-                #    self.sess.run(self.tf_mod.tb_stats, feed_dict=data_dict),
-                #    batch_counter
-                #)
+                # Write training stats to tensorboard
+                self.tf_mod.tb_writer.add_summary(
+                    self.sess.run(self.tf_mod.tb_stats, feed_dict=data_dict),
+                    batch_counter
+                )
 
                 # logging elsewhere
                 train_error = self.score(train_in, train_out)

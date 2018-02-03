@@ -8,7 +8,7 @@ import logging
 
 import random
 
-from itertools import islice
+from itertools import islice, cycle
 from collections import Iterable
 
 from abc import ABC, abstractmethod
@@ -124,7 +124,7 @@ class DatasetManager(BaseDatasetManager):
     batches of data in nearly-random order"""
 
 
-    def get_next_batch(self, batch_size=32):
+    def get_next_batch(self, batch_size=32, eternal=False):
         """
         This generator should yield batches of training data
 
@@ -146,18 +146,18 @@ class SequentialDatasetManager(BaseDatasetManager):
     timeseries or text sequences in an RNN"""
 
 
-    def get_next_batch(self, batch_size=32):
+    def get_next_batch(self, batch_size=32, eternal=False):
         """
         This generator should yield batches of training data
 
         Args:
             batch_size: int for number of samples in batch
+            eternal: this generator runs forever and ever
         Yields:
             X, Y: lists of input/output samples
         """
 
         for X, Y in zip(self.X, self.Y):
-
             for x, y in self._yield_batches(X, Y, batch_size):
                 yield x, y
 
@@ -270,7 +270,7 @@ class BalancedDatasetManager(BaseDatasetManager):
 
         return X, Y
 
-    def get_next_batch(self, positive_classes, batch_size=32):
+    def get_next_batch(self, positive_classes, batch_size=32, eternal=False):
         """
         This generator should yield batches of training data
 
@@ -278,6 +278,7 @@ class BalancedDatasetManager(BaseDatasetManager):
             positive_classes: list of functions defining the 'positive class'
                 based on each output type
             batch_size: int for number of samples in batch
+            eternal: this generator runs forever and ever
         Yields:
             X, Y: lists of input/output samples
         """
@@ -285,8 +286,6 @@ class BalancedDatasetManager(BaseDatasetManager):
         positive_classes = self._setup_positive_class_def(positive_classes)
 
         for X, Y in zip(self.X, self.Y):
-
             X, Y = self._shuffle_data(X, Y, positive_classes)
             for x, y in self._yield_batches(X, Y, batch_size):
                 yield x, y
-

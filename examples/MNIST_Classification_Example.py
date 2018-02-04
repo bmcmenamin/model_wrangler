@@ -105,11 +105,10 @@ model.add_data(data_train, data_test)
 
 # Run training
 pre_accy = 100 * model.score([test_data], [test_labels], score_func=accuracy)
-print("Pre-training acc'y: {:.1f}%".format(pre_accy))
-
 model.train()
-
 post_accy = 100 * model.score([test_data], [test_labels], score_func=accuracy)
+
+print("Pre-training acc'y: {:.1f}%".format(pre_accy))
 print("Post-training acc'y: {:.1f}%".format(post_accy))
 
 

@@ -9,13 +9,51 @@
 import numpy as np
 from scipy.stats import zscore
 
-from modelwrangler.corral.convolutional_siamese import ConvolutionalSiamese
-from modelwrangler.tester import ModelTester
+from model_wrangler.model_wrangler import ModelWrangler
+from model_wrangler.dataset_managers import DatasetManager
 
+from model_wrangler.model.losses import accuracy
+
+from model_wrangler.model.corral.convolutional_siamese import ConvolutionalSiameseModel
+from model_wrangler.model.tester import ModelTester
+
+
+CONV_PARAMS = {
+    'name': 'test_conv_siam',
+    'path': './tests/test_conv_siam',
+    'graph': {
+        'in_sizes': [[100, 1], [100, 1]],
+        'hidden_params': [
+            {
+                'num_units': 4,
+                'kernel': 3,
+                'strides': 1,
+                'bias': True,
+                'activation': 'relu',
+                'activity_reg': {'l1': 0.1},
+                'dropout_rate': 0.1,
+            },
+            {
+                'num_units': 4,
+                'kernel': 3,
+                'strides': 1,
+                'bias': True,
+                'activation': 'relu',
+                'activity_reg': {'l1': 0.1},
+                'dropout_rate': 0.1,
+            }
+        ],
+        'num_out': 1, 
+    },
+}
+
+TRAIN_PARAMS = {
+    'num_epochs': 5,
+    'batch_size': 10
+}
 
 def make_timeseries_testdata(in_dim=100, n_samp=1000):
-    """Make sample data for linear regression
-    """
+    """Make sample data"""
 
     signal = zscore(np.random.randn(n_samp, 3), axis=0)
 
@@ -24,49 +62,49 @@ def make_timeseries_testdata(in_dim=100, n_samp=1000):
         X[:, i] += 0.1 * signal[:, (i % signal.shape[1])]
     return X
 
-def test_conv_siamese(dim=48):
-    """Test dense autoencodes
-    """
+def test_conv_siamese(n_samp=1000):
+    """Test convolutional siamese network"""
 
-    X0 = make_timeseries_testdata(in_dim=dim)
-    X0 = X0[:, :, np.newaxis]
+    in_dim = CONV_PARAMS['graph']['in_sizes'][0][0]
 
-    X1 = make_timeseries_testdata(in_dim=dim)
-    X1 = X1[:, :, np.newaxis]
+    X0 = make_timeseries_testdata(in_dim=in_dim, n_samp=n_samp)
+    X0 = X0[..., np.newaxis]
 
-    Y = np.array([i % 2 for i in range(X0.shape[0])]).reshape(-1, 1)
+    X1 = make_timeseries_testdata(in_dim=in_dim, n_samp=n_samp)
+    X1 = X1[..., np.newaxis]
 
-    convsiam_network = ConvolutionalSiamese(
-        in_size=dim,
-        out_size=3,
-        conv_nodes=[3],
-        conv_params={
-            'dropout_rate': 0.1,
-            'kernel': 3,
-            'strides': 2,
-            'pool_size': 2,
-        },
-        dense_nodes=[2],
-        dense_params={
-            'dropout_rate': 0.1,
-            'activation': 'relu',
-        },
-        output_params={
-            "dropout_rate": None,
-            "activation": 'linear',
-        },
-    )
+    Y = np.array([i % 2 for i in range(n_samp)]).reshape(-1, 1)
 
 
-    print(convsiam_network.score([X0, X1], Y))
-    for _ in range(5):
-        convsiam_network.train([X0, X1], Y)
-        print(convsiam_network.score([X0, X1], Y))
+    ff_model = ModelWrangler(ConvolutionalSiameseModel, CONV_PARAMS)
+    ff_model.add_train_params(TRAIN_PARAMS)
+
+    dm1 = DatasetManager([X0, X1], [Y])
+    dm2 = DatasetManager([X0, X1], [Y])
+    ff_model.add_data(dm1, dm2)
+
+    print("Loss: {}".format(ff_model.score([X0, X1], [Y])))
+    print("Acc'y: {}".format(ff_model.score([X0, X1], [Y], score_func=accuracy)))
+    ff_model.train()
+    print("Loss: {}".format(ff_model.score([X0, X1], [Y])))
+    print("Acc'y: {}".format(ff_model.score([X0, X1], [Y], score_func=accuracy)))
+
+
+    for row in range(20):
+        embed_vals = ff_model.embed([X0[row:(row+1), ...], X0[row:(row+1), ...]])
+        if (embed_vals[0] == embed_vals[1]).all():
+            print("And it's the shared weights are working correctly!")
+        else:
+            print(
+                "Uh oh... the same input gets embedded differently based on "
+                "which wide it was input on. that shouldn't happen with shared weights"
+            )
+
 
 if __name__ == "__main__":
 
-    print('\n\nunit testing siamese net')
-    ModelTester(ConvolutionalSiamese)
+    #print('\n\nunit testing siamese net')
+    #ModelTester(ConvolutionalSiamese)
 
     print("\n\ne2e testing ConvolutionalSiamese")
     test_conv_siamese()

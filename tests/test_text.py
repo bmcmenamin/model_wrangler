@@ -9,24 +9,61 @@
 import numpy as np
 from nltk.corpus import brown
 
-import modelwrangler.tf_ops as tops
-from modelwrangler.tester import ModelTester
+from model_wrangler.model_wrangler import ModelWrangler
+from model_wrangler.dataset_managers import DatasetManager
 
-from modelwrangler.corral.convolutional_text_classification import ConvolutionalText
+from model_wrangler.model.losses import accuracy
+
+from model_wrangler.model.corral.text_classification import TextClassificationModel
+
+from model_wrangler.model.tester import ModelTester
 
 
-def make_testdata(in_dim=10, out_dim=3, num_samples=100):
+
+CONV_PARAMS = {
+    'name': 'test_text',
+    'path': './tests/test_text',
+    'graph': {
+        'num_inputs': 1,
+        'pad_length': 256,
+        'hidden_params': [
+            {
+                'num_units': 4,
+                'kernel': 3,
+                'strides': 1,
+                'bias': True,
+                'activation': 'relu',
+                'activity_reg': {'l1': 0.1},
+                'dropout_rate': 0.0,
+            },
+            {
+                'num_units': 4,
+                'kernel': 3,
+                'strides': 1,
+                'bias': True,
+                'activation': 'relu',
+                'activity_reg': {'l1': 0.1},
+                'dropout_rate': 0.0,
+            }
+        ],
+        'embed_params': {
+            'num_units': 5,
+            'bias': True,
+            'activation': 'relu'
+        },
+        'out_sizes': [5], 
+    }
+}
+
+
+def make_testdata(out_dim=3, num_samples=100):
     """Make sample data from brown corpus"""
 
     X = []
     y = []
 
-    tp = tops.TextProcessor()
-
     for idx, para in enumerate(brown.paras()):
-
-        intlist = tp.string_to_ints(' '.join(para[0]), pad_len=in_dim)
-        X.append(np.array(intlist))
+        X.append(' '.join(para[0])[:256])
 
         _tmpy = np.zeros((out_dim,))
         _tmpy[idx % out_dim] = 1.0
@@ -35,36 +72,34 @@ def make_testdata(in_dim=10, out_dim=3, num_samples=100):
         if idx > num_samples:
             break
 
-    X = np.vstack(X)
-    y = np.vstack(y)
     return X, y
 
 
-def test_text_ff(out_dim=3):
-    """Test dense autoencodes"""
+def test_text_ff():
+    """Test dense feedforward model"""
 
-    text_model = ConvolutionalText(
-        conv_nodes=[10, 10],
-        dense_nodes=[2],
-        out_size=out_dim)
+    ff_model = ModelWrangler(TextClassificationModel, CONV_PARAMS)
 
-    X, y = make_testdata(
-        in_dim=text_model.params.in_size,
-        out_dim=out_dim,
-        num_samples=100*out_dim
-    )
+    out_dim = CONV_PARAMS['graph']['out_sizes'][0]
+    X, y = make_testdata(out_dim=out_dim)
 
-    print("Loss: {}".format(text_model.score(X, y)))
-    print("Acc'y: {}".format(text_model.score(X, y, score_func=tops.accuracy)))
-    text_model.train(X, y)
-    print("Loss: {}".format(text_model.score(X, y)))
-    print("Acc'y: {}".format(text_model.score(X, y, score_func=tops.accuracy)))
+    dm1 = DatasetManager([X], [y])
+    dm2 = DatasetManager([X], [y])
+    ff_model.add_data(dm1, dm2)
+
+    print("Loss: {}".format(ff_model.score([X], [y])))
+    print("Acc'y: {}".format(ff_model.score([X], [y], score_func=accuracy)))
+    ff_model.train()
+    print("Loss: {}".format(ff_model.score([X], [y])))
+    print("Acc'y: {}".format(ff_model.score([X], [y], score_func=accuracy)))
 
 
 if __name__ == "__main__":
 
     print("\n\nunit testing text convolutional model")
-    ModelTester(ConvolutionalText)
+    #ModelTester(
+    #    ModelWrangler(TextClassificationModel, CONV_PARAMS)
+    #)
 
     print("\n\ne2e testing text convolutional model")
-    test_text_ff(out_dim=3)
+    test_text_ff()

@@ -100,4 +100,6 @@ ENV/
 # mypy
 .mypy_cache/
 
-tests/20_newsgroups/
+examples/mnist_data/
+examples/*.png
+mnist_data/

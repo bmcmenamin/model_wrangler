@@ -76,7 +76,7 @@ class ConvolutionalSiameseModel(BaseArchitecture):
         ]
 
         with tf.variable_scope('encoder/', reuse=tf.AUTO_REUSE):
-            self.embed = [
+            embeds = [
                 self.build_embedder(in_layers[0], hidden_params),
                 self.build_embedder(in_layers[1], hidden_params)
             ]
@@ -85,7 +85,7 @@ class ConvolutionalSiameseModel(BaseArchitecture):
             #decode_scale = tf.Variable(tf.ones([1, 1]), name="scale_{}".format(idx))
             decode_int = tf.Variable(tf.zeros([1, ]), name="intercept")
             out_layers_preact = decode_int + tf.reduce_sum(
-                tf.multiply(*self.embed), 1, keepdims=True
+                tf.multiply(*embeds), 1, keepdims=True
                 )
 
             out_layers = [tf.sigmoid(out_layers_preact)]
@@ -100,4 +100,4 @@ class ConvolutionalSiameseModel(BaseArchitecture):
 
         loss = tf.reduce_sum(loss_sigmoid_ce(out_layers_preact, target_layers[0]))
 
-        return in_layers, out_layers, target_layers, loss
+        return in_layers, out_layers, target_layers, embeds, loss

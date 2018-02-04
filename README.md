@@ -10,10 +10,6 @@ There's more documentation in `./model_wrangler/corral` and `./model_wrangler/te
 Here's my partial to-do list:
 
 * Add more tensorboard scalars during training
-* Clean up DataManagers
-    * Better support for one-hot encoding inputs
-    * Better support for DataManagers at time of model creation
-    * Streaming inputs from disk
 * Add functionality for timeseries data:
     * recurrent models (e.g., LSTM)
     * DataManager for sequential/Timeseries data

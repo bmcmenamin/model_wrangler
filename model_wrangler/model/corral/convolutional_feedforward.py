@@ -73,6 +73,8 @@ class ConvolutionalFeedforwardModel(BaseArchitecture):
             tf.contrib.layers.flatten(layer_stack[-1])
         )
 
+        embeds = [layer_stack[-1]]
+
         # Add final embedding layers
 
         out_layer_preact = [
@@ -98,4 +100,4 @@ class ConvolutionalFeedforwardModel(BaseArchitecture):
             [loss_softmax_ce(*pair) for pair in zip(out_layer_preact, target_layers)]
         )
 
-        return in_layers, out_layers, target_layers, loss
+        return in_layers, out_layers, target_layers, embeds, loss

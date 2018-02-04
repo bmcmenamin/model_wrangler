@@ -56,6 +56,8 @@ class DenseFeedforwardModel(BaseArchitecture):
                     append_dropout(self, layer_stack[-1], layer_param, 'dropout')
                     )
 
+        embeds = [layer_stack[-1]]
+
         out_layer_preact = [
             append_dense(self, layer_stack[-1], embed_params, 'preact_{}'.format(idx))
             for idx, out_size in enumerate(out_sizes)
@@ -79,4 +81,4 @@ class DenseFeedforwardModel(BaseArchitecture):
             [loss_softmax_ce(*pair) for pair in zip(out_layer_preact, target_layers)]
         )
 
-        return in_layers, out_layers, target_layers, loss
+        return in_layers, out_layers, target_layers, embeds, loss

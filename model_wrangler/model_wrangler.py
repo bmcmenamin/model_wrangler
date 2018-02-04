@@ -198,27 +198,17 @@ class ModelWrangler(object):
     def embed(self, input_x):
         """Get embeddings for an input value, input_x"""
 
-        if self.tf_mod.embed is None:
-            raise AttributeError('the embed layer is not defined in the model')
+        if self.tf_mod.embeds is None:
+            raise AttributeError('the embedding layers are not defined in the model')
 
         data_dict = self.make_data_dict(
             input_x,
             None, is_training=False)
 
         vals = self.sess.run(
-            self.tf_mod.embed,
+            self.tf_mod.embeds,
             feed_dict=data_dict
         )
-
-        if False:
-            vals = []
-            for embed_layer in self.tf_mod.embed:
-                vals.append(
-                    self.sess.run(
-                        embed_layer,
-                        feed_dict=data_dict
-                    )
-                )
 
         return vals
 

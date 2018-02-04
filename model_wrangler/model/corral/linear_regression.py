@@ -59,18 +59,5 @@ class LinearRegressionModel(BaseArchitecture):
             [loss_mse(*pair) for pair in zip(out_layers, target_layers)]
         )
 
-        return in_layers, out_layers, target_layers, loss
-
-    def setup_training_step(self, params):
-        """Set up loss and training step"""
-
-        # Import params
-        learning_rate = params.get('learning_rate', 0.1)
-
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-
-        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-        with tf.control_dependencies(update_ops):
-            train_step = optimizer.minimize(self.loss)
-
-        return train_step
+        embeds = None
+        return in_layers, out_layers, target_layers, embeds, loss

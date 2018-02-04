@@ -45,6 +45,8 @@ class BaseArchitecture(ABC):
         in_sizes = params.get('in_sizes', [])
         out_sizes = params.get('out_sizes', [])
 
+        embeds = None
+
         in_layers = [
             tf.placeholder("float", name="input_{}".format(idx), shape=[None, in_size])
             for idx, in_size in enumerate(in_sizes)
@@ -65,7 +67,7 @@ class BaseArchitecture(ABC):
             [loss_sigmoid_ce(*pair) for pair in zip(target_layers, out_layers)]
         )
 
-        return in_layers, out_layers, target_layers, loss
+        return in_layers, out_layers, target_layers, embeds, loss
 
     def setup_tensorboard_tracking(self, tb_log_path):
         """Set up summary stats to track in tensorboard"""
@@ -103,17 +105,16 @@ class BaseArchitecture(ABC):
         self.inputs = None
         self.outputs = None
         self.targets = None
+        self.embeds = None
         self.loss = None
         self.train_step = None
-
-        self.embed = None # optional
 
         self.graph = tf.Graph()
         with self.graph.as_default():
 
             self.is_training = tf.placeholder("bool", name="is_training")
 
-            self.inputs, self.outputs, self.targets, self.loss = self.setup_layers(graph_params)
+            self.inputs, self.outputs, self.targets, self.embeds, self.loss = self.setup_layers(graph_params)
             self.train_step = self.setup_training_step(train_params)
 
             self.tb_writer = self.setup_tensorboard_tracking(params['path'])

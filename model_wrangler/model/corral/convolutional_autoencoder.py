@@ -108,7 +108,7 @@ class ConvolutionalAutoencoderModel(BaseArchitecture):
                     tf.expand_dims(layer_stack[-1], -1)
                     )
 
-            self.embed = [layer_stack[-1]]
+            embeds = [layer_stack[-1]]
 
         for idx, layer_param in enumerate(decoding_params):
             with tf.variable_scope('decoding_{}'.format(idx)):
@@ -136,4 +136,4 @@ class ConvolutionalAutoencoderModel(BaseArchitecture):
             [loss_mse(*pair) for pair in zip(out_layers, target_layers)]
         )
 
-        return in_layers, out_layers, target_layers, loss
+        return in_layers, out_layers, target_layers, embeds, loss

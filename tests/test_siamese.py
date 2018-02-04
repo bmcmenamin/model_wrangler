@@ -90,6 +90,17 @@ def test_conv_siamese(n_samp=1000):
     print("Acc'y: {}".format(ff_model.score([X0, X1], [Y], score_func=accuracy)))
 
 
+    for row in range(20):
+        embed_vals = ff_model.embed([X0[row:(row+1), ...], X0[row:(row+1), ...]])
+        if (embed_vals[0] == embed_vals[1]).all():
+            print("And it's the shared weights are working correctly!")
+        else:
+            print(
+                "Uh oh... the same input gets embedded differently based on "
+                "which wide it was input on. that shouldn't happen with shared weights"
+            )
+
+
 if __name__ == "__main__":
 
     #print('\n\nunit testing siamese net')

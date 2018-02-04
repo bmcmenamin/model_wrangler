@@ -205,14 +205,20 @@ class ModelWrangler(object):
             input_x,
             None, is_training=False)
 
-        vals = []
-        for embed_layer in self.tf_mod.embed:
-            vals.append(
-                self.sess.run(
-                    embed_layer,
-                    feed_dict=data_dict
+        vals = self.sess.run(
+            self.tf_mod.embed,
+            feed_dict=data_dict
+        )
+
+        if False:
+            vals = []
+            for embed_layer in self.tf_mod.embed:
+                vals.append(
+                    self.sess.run(
+                        embed_layer,
+                        feed_dict=data_dict
+                    )
                 )
-            )
 
         return vals
 

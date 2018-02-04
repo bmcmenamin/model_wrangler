@@ -108,7 +108,7 @@ class ConvolutionalAutoencoderModel(BaseArchitecture):
                     tf.expand_dims(layer_stack[-1], -1)
                     )
 
-            self.embed = layer_stack[-1]
+            self.embed = [layer_stack[-1]]
 
         for idx, layer_param in enumerate(decoding_params):
             with tf.variable_scope('decoding_{}'.format(idx)):

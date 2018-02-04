@@ -65,7 +65,7 @@ class DenseAutoencoderModel(BaseArchitecture):
                 append_dropout(self, layer_stack[-1], embed_params, 'dropout')
                 )
 
-            self.embed = layer_stack[-1]
+            self.embed = [layer_stack[-1]]
 
         # Decoding layers
         for idx, layer_param in enumerate(decoding_params):

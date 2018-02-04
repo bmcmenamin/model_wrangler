@@ -62,7 +62,6 @@ class ConvolutionalSiameseModel(BaseArchitecture):
 
         in_sizes = params.get('in_sizes', [])
         hidden_params = params.get('hidden_params', [])
-        num_out = params.get('num_out', 1)
 
         if len(in_sizes) != 2:
             raise AttributeError('Siamese network needs exactly 2 inputs') 
@@ -76,44 +75,29 @@ class ConvolutionalSiameseModel(BaseArchitecture):
             for idx, in_size in enumerate(in_sizes)
         ]
 
-        with tf.variable_scope('encoder/', reuse=tf.AUTO_REUSE) as encode_scope:
-            self.embed = self.build_embedder(in_layers[0], hidden_params)
-            embed2 = self.build_embedder(in_layers[1], hidden_params)
-
-
-        # Add final embedding layers
-        embed_diff = tf.contrib.layers.flatten(self.embed - embed2)
+        with tf.variable_scope('encoder/', reuse=tf.AUTO_REUSE):
+            self.embed = [
+                self.build_embedder(in_layers[0], hidden_params),
+                self.build_embedder(in_layers[1], hidden_params)
+            ]
 
         with tf.variable_scope('decoder/'):
+            #decode_scale = tf.Variable(tf.ones([1, 1]), name="scale_{}".format(idx))
+            decode_int = tf.Variable(tf.zeros([1, ]), name="intercept")
+            out_layers_preact = decode_int + tf.reduce_sum(
+                tf.multiply(*self.embed), 1, keepdims=True
+                )
 
-            decode_coeffs = [
-                tf.Variable(tf.ones([embed_diff.get_shape()[1], 1]), name="coeff_{}".format(idx))
-                for idx in range(num_out)
-            ]
-
-            decode_ints = [
-                tf.Variable(tf.zeros([1, ]), name="intercept_{}".format(idx))
-                for idx in range(num_out)
-            ]
-
-            out_layers_preact = [
-                tf.add(tf.matmul(embed_diff, coeff), intercept, name="output_{}".format(idx))
-                for idx, (coeff, intercept) in enumerate(zip(decode_coeffs, decode_ints))
-            ]
-
-            out_layers = [tf.sigmoid(layer) for layer in out_layers_preact]
+            out_layers = [tf.sigmoid(out_layers_preact)]
 
         target_layers = [
-            tf.placeholder("float", name="target_{}".format(idx), shape=[None, 1])
-            for idx in range(num_out)
+            tf.placeholder("float", name="target", shape=[None, 1])
         ]
 
         #
         # Set up loss
         #
 
-        loss = tf.reduce_sum(
-            [loss_sigmoid_ce(*pair) for pair in zip(out_layers_preact, target_layers)]
-        )
+        loss = tf.reduce_sum(loss_sigmoid_ce(out_layers_preact, target_layers[0]))
 
         return in_layers, out_layers, target_layers, loss

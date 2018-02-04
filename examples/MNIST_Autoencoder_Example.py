@@ -4,10 +4,10 @@ import sys
 import numpy as np
 from sklearn.datasets import fetch_mldata
 
-import tensorflow as tf
+from model_wrangler.model_wrangler import ModelWrangler
+from model_wrangler.dataset_managers import DatasetManager
+from model_wrangler.model.corral.convolutional_autoencoder import ConvolutionalAutoencoderModel
 
-from modelwrangler.corral.convolutional_autoencoder import ConvolutionalAutoencoder
-from modelwrangler.dataset_managers import CategoricalDataManager
 
 sys.path.append(os.path.pardir)
 
@@ -21,67 +21,102 @@ if not os.path.exists(DATA_DIR):
 # Download MNIST dataset
 
 mnist_data = fetch_mldata('MNIST original', data_home=DATA_DIR)
-image_data = mnist_data['data'].reshape(-1, 28, 28, order='F')[..., np.newaxis]
+
+image_data = mnist_data['data'].reshape(-1, 28, 28,  order='F')[..., np.newaxis]
 del mnist_data
 
-train_data = image_data[::1000, :, :, :]
-test_data = image_data[1::1000, :, :, :]
+train_data = image_data[::2, :, :, :]
+test_data = image_data[1::2, :, :, :]
 
-# Initialize the model
+data_train = DatasetManager([train_data], [train_data])
+data_test = DatasetManager([test_data], [test_data])
 
-model_name = "mnist_ae_example"
 
-cae_model = ConvolutionalAutoencoder(
-    name=model_name,
-    in_size=[28, 28, 1],
-    num_epochs=10,
-    encode_nodes=[64],
-    encode_params={
-        "activation": 'relu',
-        "dropout_rate": None,
-        "kernel": [5, 5],
-        "strides": [3, 3],
-        "pool_size": [2, 2]
-    },
-    bottleneck_dim=128,
-    bottleneck_params={
-        "activation": 'relu',
-        "act_reg": {'l1': 0.1},
-        "dropout_rate": 0.1,
-    },
-    decode_nodes=[64],
-    decode_params={
-        "activation": 'relu',
-        "dropout_rate": None,
-        "kernel": [5, 5],
-    },
-    output_params={
-        "dropout_rate": None,
-        "activation": None,
-        "act_reg": 'relu'
-    })
+#
+# Create a model
+#
+
+CONV_PARAMS = {
+    'name': 'mnist_ae_example',
+    'path': './mnist_ae_example',
+    'graph': {
+        'in_sizes': [[28, 28, 1]],
+        'encoding_params': [
+            {
+                'num_units': 16,
+                'kernel': [3, 3],
+                'strides': 2,
+                'pool_size': 2,
+                'bias': True,
+                'activation': 'relu',
+                'activity_reg': {'l1': 0.1},
+                'dropout_rate': 0.0
+            },
+            {
+                'num_units': 32,
+                'kernel': [3, 3],
+                'strides': 2,
+                'pool_size': 2,
+                'bias': True,
+                'activation': 'relu',
+                'activity_reg': {'l1': 0.1},
+                'dropout_rate': 0.0
+            },        ],
+        'embed_params': {
+            'num_units': 32,
+            'bias': True,
+            'activation': 'relu'
+        },
+        'decoding_params': [
+            {
+                'num_units': 32,
+                'kernel': [5, 5],
+                'strides': 1,
+                'pool_size': 1,
+                'bias': True,
+                'activation': 'relu',
+                'dropout_rate': 0.0
+            },
+            {
+                'num_units': 32,
+                'kernel': [5, 5],
+                'strides': 1,
+                'pool_size': 1,
+                'bias': True,
+                'activation': 'relu',
+                'dropout_rate': 0.0
+            },
+        ],
+    }
+}
+
+TRAIN_PARAMS = {
+    'num_epochs': 20,
+    'batch_size': 64,
+    'interval': 5
+}
+
+
+# Set up a dataset manager for categorical data
+model = ModelWrangler(ConvolutionalAutoencoderModel, CONV_PARAMS)
+model.add_train_params(TRAIN_PARAMS)
+model.add_data(data_train, data_test)
 
 
 # Run training
+pre_mse = model.score([test_data], [test_data])
+model.train()
+post_mse = model.score([test_data], [test_data])
 
-pre_mse = cae_model.score(test_data, test_data)
-cae_model.train(train_data, train_data)
-post_mse = cae_model.score(test_data, test_data)
-
-print("Pre-training MSE: {:.1f}".format(pre_mse))
-print("Post-training MSE: {:.1f}".format(post_mse))
-
+print("Pre-training mse: {:.3f}".format(pre_mse))
+print("Post-training mse: {:.3f}".format(post_mse))
 
 # You can load the file from disk!
 
 print("Loading file from disk")
 
-param_file = os.path.join(
-    model_name,
-    '{}-params.json'.format(model_name)
-)
+param_file = os.path.join(CONV_PARAMS['path'], 'model_params.pickle')
 
-restored_model = ConvolutionalAutoencoder.load(param_file)
-post_mse_restored_model = restored_model.score(train_data, train_data)
-
-print("Post-training MSE for restored model: {:.1f}".format(post_mse_restored_model))
+restored_model = ModelWrangler.load(param_file)
+post_accy_restored_mse = restored_model.score([test_data], [test_data])
+print("Post-training mse for restored model: {:.3f}".format(post_accy_restored_mse))

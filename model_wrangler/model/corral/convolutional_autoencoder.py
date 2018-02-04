@@ -72,6 +72,9 @@ class ConvolutionalAutoencoderModel(BaseArchitecture):
         decoding_params = params.get('decoding_params', [])
         out_sizes = in_sizes #params.get('out_sizes', [])
 
+        if len(in_sizes) != 1:
+            raise AttributeError('Siamese network needs exactly 1 input') 
+
         #
         # Build model
         #
@@ -100,9 +103,10 @@ class ConvolutionalAutoencoderModel(BaseArchitecture):
                 append_dense(self, layer_stack[-1], embed_params, 'embedding')
                 )
 
-            layer_stack.append(
-                tf.expand_dims(layer_stack[-1], -1)
-                )
+            for _ in range(len(in_sizes[0]) - 1):
+                layer_stack.append(
+                    tf.expand_dims(layer_stack[-1], -1)
+                    )
 
             self.embed = layer_stack[-1]
 

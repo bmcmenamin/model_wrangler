@@ -4,14 +4,11 @@ import sys
 import numpy as np
 from sklearn.datasets import fetch_mldata
 
-
 from model_wrangler.model_wrangler import ModelWrangler
 from model_wrangler.dataset_managers import DatasetManager
 from model_wrangler.model.corral.convolutional_feedforward import ConvolutionalFeedforwardModel
 
-
 from model_wrangler.model.losses import accuracy
-
 
 
 sys.path.append(os.path.pardir)
@@ -48,11 +45,8 @@ train_labels = image_labels[::10, :]
 test_data = image_data[1::10, :, :, :]
 test_labels = image_labels[1::10, :]
 
-
 data_train = DatasetManager([train_data], [train_labels])
 data_test = DatasetManager([test_data], [test_labels])
-
-
 
 
 #

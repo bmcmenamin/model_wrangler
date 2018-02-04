@@ -103,6 +103,8 @@ class ModelWrangler(object):
 
         self.training_data = None
         self.holdout_data = None
+        self.training_gen = None
+        self.holdout_gen = None
         self.training_params = {}
 
         self.model_params = model_params
@@ -112,6 +114,7 @@ class ModelWrangler(object):
 
         self.session_params = set_max_threads(set_session_params())
         self.sess = self.new_session()
+        
         self.initialize()
 
     def add_data(self, training_dataset, holdout_dataset):
@@ -254,25 +257,21 @@ class ModelWrangler(object):
     def _run_epoch(self):
         """Run an epoch of training"""
 
-        batch_size = self.training_params.get('batch_size', 32)
         train_verbose = self.training_params.get('verbose', True)
         train_verbose_interval = self.training_params.get('interval', 100)
 
-        batch_gen = self.training_data.get_next_batch(batch_size=batch_size)
-        valid_gen = self.holdout_data.get_next_batch(batch_size=batch_size)
-        for batch_counter, (train_in, train_out) in enumerate(batch_gen):
+        for batch_counter, (train_in, train_out) in enumerate(self.training_gen):
+
+            if batch_counter >= self.training_params.get('epoch_length', np.inf):
+                break
+
             data_dict = self.make_data_dict(train_in, train_out, is_training=True)
             self.sess.run(self.tf_mod.train_step, feed_dict=data_dict)
 
             if train_verbose and ((batch_counter % train_verbose_interval) == 0):
+                ho_in, ho_out = next(self.holdout_gen)
 
-                try:
-                    valid_in, valid_out = next(valid_gen)
-                except StopIteration:
-                    valid_gen = self.holdout_data.get_next_batch(batch_size=batch_size)
-                    valid_in, valid_out = next(valid_gen)
-
-                data_dict = self.make_data_dict(valid_in, valid_out, is_training=False)
+                data_dict = self.make_data_dict(ho_in, ho_out, is_training=False)
 
                 # Write training stats to tensorboard
                 self.tf_mod.tb_writer.add_summary(
@@ -282,11 +281,9 @@ class ModelWrangler(object):
 
                 # logging elsewhere
                 train_error = self.score(train_in, train_out)
-                holdout_error = self.score(valid_in, valid_out)
+                holdout_error = self.score(ho_in, ho_out)
                 LOGGER.info("Batch %d: Training score = %0.6f", batch_counter, train_error)
                 LOGGER.info("Batch %d: Holdout score = %0.6f", batch_counter, holdout_error)
-
-        batch_gen = self.training_data.get_next_batch(batch_size=batch_size)
 
 
     def train(self):
@@ -295,11 +292,30 @@ class ModelWrangler(object):
         on the model using a bunch of input_x, target_y
         """
         num_epochs = self.training_params.get('num_epochs', 1)
+
+
+        epoch_length = self.training_params.get('epoch_length', None)
+        batch_size = self.training_params.get('batch_size', 32)
+
+        self.training_gen = self.training_data.get_next_batch(
+            batch_size=batch_size, eternal=epoch_length is not None)
+
+        self.holdout_gen = self.holdout_data.get_next_batch(
+            batch_size=batch_size, eternal=True)
+
         try:
             for epoch in range(num_epochs):
                 LOGGER.info('Starting Epoch %d', epoch)
                 self._run_epoch()
                 self.save(epoch)
+
+                if not epoch_length:
+                    self.training_gen = self.training_data.get_next_batch(
+                        batch_size=batch_size, eternal=False)
+
+                    self.holdout_gen = self.holdout_data.get_next_batch(
+                        batch_size=batch_size, eternal=True)
+
 
         except KeyboardInterrupt:
             print('Force exiting training.')

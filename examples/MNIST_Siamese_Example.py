@@ -1,20 +1,18 @@
 import os
-import sys
-
+import random
 from itertools import combinations
 
 import numpy as np
-from sklearn.datasets import fetch_mldata
-
-import tensorflow as tf
 import pandas as pd
+import tensorflow as tf
+
+from sklearn.datasets import fetch_mldata
 from sklearn.manifold import TSNE
 
-import matplotlib.pyplot as plt
+from model_wrangler.model_wrangler import ModelWrangler
+from model_wrangler.dataset_managers import DatasetManager
+from model_wrangler.model.corral.convolutional_siamese import ConvolutionalSiameseModel
 
-from modelwrangler.corral.convolutional_siamese import ConvolutionalSiamese
-
-sys.path.append(os.path.pardir)
 
 EXAMPLE_DIR = os.path.curdir
 DATA_DIR = os.path.join(EXAMPLE_DIR, 'mnist_data')
@@ -34,19 +32,89 @@ def onehot_encoding(categories, max_categories):
     return out_array
 
 
-def make_training_pairs(x, y):
-    input_0 = []
-    input_1 = []
-    output = []
-    for i in combinations(range(x.shape[0]), r=2):
-        input_0.append(x[i[0]: (i[0] + 1), ...])
-        input_1.append(x[i[1]: (i[1] + 1), ...])
-        output.append(np.sum(np.prod(y[i, ...], axis=0)))
+def make_data(x, row_list):
+    for i in row_list:
+        yield x[i, ...]
 
-    input_0 = np.vstack(input_0)
-    input_1 = np.vstack(input_1)
-    output = np.vstack(output)
-    return input_0, input_1, output
+def make_labels(y, pair_list):
+    for pair in pair_list:
+        output = np.sum(np.prod(y[pair, ...], axis=0))
+        yield [output]
+
+# Download MNIST dataset
+
+mnist_data = fetch_mldata('MNIST original', data_home=DATA_DIR)
+
+image_data = 1.0 * mnist_data['data'].reshape(-1, 28, 28, order='F')[..., np.newaxis]
+image_labels = onehot_encoding(list(mnist_data['target']), 10)
+del mnist_data
+
+image_data = image_data[::100, ...]
+image_labels = image_labels[::100, ...]
+
+# Set up training data
+
+pair_ordering = [i for i in combinations(range(image_data.shape[0]), r=2)]
+random.shuffle(pair_ordering)
+
+data_train = DatasetManager(
+    [
+        make_data(image_data, [i[0] for i in pair_ordering[:200]]),
+        make_data(image_data, [i[1] for i in pair_ordering[:200]]),
+    ],
+    [make_labels(image_labels, pair_ordering[:200])]
+)
+
+data_test = DatasetManager(
+    [
+        make_data(image_data, [i[0] for i in pair_ordering[200:300]]),
+        make_data(image_data, [i[1] for i in pair_ordering[200:300]]),
+    ],
+    [make_labels(image_labels, pair_ordering[200:300])]
+)
+
+# Setting up a model
+
+CONV_PARAMS = {
+    'name': 'mnist_siamese_example',
+    'path': './mnist_siamese_example',
+    'graph': {
+        'in_sizes': [[28, 28, 1], [28, 28, 1]],
+        'hidden_params': [
+            {
+                'num_units': 16,
+                'kernel': 3,
+                'strides': 1,
+                'pool_size': 1,
+                'bias': True,
+                'activation': 'relu',
+                'activity_reg': {'l1': 0.1},
+                'dropout_rate': 0.0,
+            },
+        ],
+        'num_out': 1, 
+    },
+}
+
+TRAIN_PARAMS = {
+    'epoch_length': 20,
+    'num_epochs': 5,
+    'batch_size': 32,
+    'interval': 1
+}
+
+
+# Set up a dataset manager for categorical data
+model = ModelWrangler(ConvolutionalSiameseModel, CONV_PARAMS)
+model.add_train_params(TRAIN_PARAMS)
+model.add_data(data_train, data_test)
+
+# Run training
+model.train()
+
+
+
+import matplotlib.pyplot as plt
 
 
 def plot_embeddings(embed_data, labels):
@@ -66,53 +134,4 @@ def plot_embeddings(embed_data, labels):
     fig.show()
     plt.savefig(os.path.join(EXAMPLE_DIR,'mnist_siamese_example.png'))
 
-
-# Download MNIST dataset
-
-mnist_data = fetch_mldata('MNIST original', data_home=DATA_DIR)
-
-image_data = mnist_data['data'].reshape(-1, 28, 28, order='F')[..., np.newaxis]
-image_labels = onehot_encoding(list(mnist_data['target']), 10)
-del mnist_data
-
-# Set up training data
-
-subsample_factor = 100
-train_data = image_data[::subsample_factor, :, :, :]
-train_labels = image_labels[::subsample_factor, :]
-train_pairs0, train_pairs1, train_pairs_labels = make_training_pairs(train_data, train_labels)
-
-# Setting up a model
-
-model_name = "siamese_example"
-
-convsiam_network = ConvolutionalSiamese(
-    name=model_name,
-    verb=True,
-    in_size=[28, 28, 1],
-    out_size=3,
-    conv_nodes=[16, 24, 8],
-    conv_params={
-        'dropout_rate': 0.1,
-        'kernel': [5, 5],
-        'strides': 2,
-        'pool_size': 2,
-    },
-    dense_nodes=[10, 5],
-    dense_params={
-        'dropout_rate': 0.1,
-        'activation': 'relu',
-    },
-    output_params={
-        "dropout_rate": None,
-        "activation": 'linear',
-    },
-    num_epochs=5
-)
-
-# Train it to learn that pictures of the same number should be next to each other
-convsiam_network.train([train_pairs0, train_pairs1], train_pairs_labels, pos_classes=[(1.0,)])
-
-# Get the embedding vectors for each input, and plot the output to screen and disk
-train_embeddings = convsiam_network.get_embedding_score(train_data)
 plot_embeddings(train_embeddings[::5], train_labels[::5])

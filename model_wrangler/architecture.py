@@ -78,7 +78,7 @@ class BaseArchitecture(ABC):
         """Set up loss and training step"""
 
         # Import params
-        learning_rate = params.get('learning_rate', 0.1)
+        learning_rate = params.get('learning_rate', 0.01)
 
         optimizer = tf.train.GradientDescentOptimizer(learning_rate)
 

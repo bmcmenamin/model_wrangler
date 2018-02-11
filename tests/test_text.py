@@ -19,7 +19,6 @@ from model_wrangler.model.corral.text_classification import TextClassificationMo
 from model_wrangler.model.tester import ModelTester
 
 
-
 CONV_PARAMS = {
     'name': 'test_text',
     'path': './tests/test_text',

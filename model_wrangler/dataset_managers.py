@@ -337,19 +337,21 @@ class SequentialDatasetManager(BaseDatasetManager):
 
     def _yield_batches(self, X, batch_size):
 
-        X_batch, Y_batch = [], []
-        for sequence in X:
-            for win in self._sliding_window(sequence, self.in_win_len + self.out_win_len):
-                print(len(win))
-                win = list(win)
-                print(len(win))
-                x, y = win[:self.in_win_len], win[self.in_win_len:]
-                X_batch.append(x)
-                Y_batch.append(y)
+        X_batch, Y_batch = [[]], [[]]
+        for seq in X[0]:
+            for win in self._sliding_window(iter(seq), win_len=self.in_win_len + self.out_win_len):
+
+                if len(X_batch) == batch_size:
+                    X_batch, Y_batch = [[]], [[]]
+
+                x, y = win[:self.in_win_len], win[-self.out_win_len:]
+                X_batch[0].append(x)
+                Y_batch[0].append(y)
 
                 if len(X_batch) == batch_size:
                     yield X_batch, Y_batch
-                    X_batch, Y_batch = [], []
+
+        yield X_batch, Y_batch
 
     def get_next_batch(self, batch_size=32, eternal=False):
         """

@@ -299,6 +299,10 @@ class SequentialDatasetManager(BaseDatasetManager):
             
     def _sliding_window(self, iterable, win_len=2):
         "Return samples from a sliding window of length win_len"
+
+        if isinstance(iterable, np.ndarray):
+            iterable = iterable.ravel()
+
         iters = tee(iterable, win_len)
         for i, it in enumerate(iters):
             self._consume(it, i)
@@ -339,16 +343,18 @@ class SequentialDatasetManager(BaseDatasetManager):
 
         X_batch, Y_batch = [[]], [[]]
         for seq in X[0]:
+
             for win in self._sliding_window(iter(seq), win_len=self.in_win_len + self.out_win_len):
 
                 if len(X_batch) == batch_size:
                     X_batch, Y_batch = [[]], [[]]
 
                 x, y = win[:self.in_win_len], win[-self.out_win_len:]
+
                 X_batch[0].append(x)
                 Y_batch[0].append(y)
 
-                if len(X_batch) == batch_size:
+                if len(X_batch[0]) == batch_size:
                     yield X_batch, Y_batch
 
         yield X_batch, Y_batch

@@ -36,18 +36,18 @@ class TextProcessor(object):
         self.int_to_char[self.missing_char_idx] = unidecode(self.MISSING_CHAR)
         self.int_to_char[self.pad_char_idx] = unidecode(self.PAD_CHAR)
 
-    def string_to_ints(self, in_string):
+    def string_to_ints(self, in_string, use_pad=True):
         """Take a sting, and turn it into a list of integers"""
 
-        char_list = list(unidecode(str(in_string)))
+        char_list = list(unidecode(str(in_string, 'utf-8')))
 
-        if self.pad_len is not None:
+        if use_pad and self.pad_len is not None:
             char_list = char_list[:self.pad_len]
 
         int_list = [self.char_to_int.get(c, self.missing_char_idx) for c in char_list]
 
         char_len = len(char_list)
-        if self.pad_len is not None and char_len < self.pad_len:
+        if use_pad and self.pad_len is not None and char_len < self.pad_len:
             pad_size = self.pad_len - char_len
             int_list.extend([self.pad_char_idx] * pad_size)
 
@@ -56,6 +56,6 @@ class TextProcessor(object):
     def ints_to_string(self, in_ints):
         """Take a list of ints, turn them into a single string"""
 
-        char_list = [self.int_to_char[c] for c in in_ints if c is not self.pad_char_idx]
-        out_string = ''.join(char_list)
+        char_list = [self.int_to_char.get(c, self.pad_char_idx) for c in in_ints]
+        out_string = str(''.join(char_list), 'utf-8')
         return out_string

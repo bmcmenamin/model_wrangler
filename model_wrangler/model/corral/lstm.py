@@ -32,48 +32,54 @@ class LstmModel(BaseArchitecture):
         # Build model
         #
 
-        if len(in_sizes) != 1:
-            raise AttributeError('Only one input allowed for LSTM network') 
-
         in_layers = [
             tf.placeholder("float", name="input_{}".format(idx), shape=[None] + in_size)
             for idx, in_size in enumerate(in_sizes)
         ]
 
-        layer_stack = [in_layers[0]]
+        # Add layers on top of each input
+        layer_stacks = {}
+        for idx_source, in_layer in enumerate(in_layers):
 
-        for idx, layer_param in enumerate(dense_params):
-            with tf.variable_scope('conv_{}'.format(idx)):
-                layer_stack.append(
-                    TimeDistributed(
-                        Dense(
-                            layer_param.get('num_units', 3),
-                            activation=layer_param.get('activation', None),
-                            use_bias=layer_param.get('bias', True)
-                        ),
-                        input_shape=layer_stack[-1].get_shape().as_list()[2:],
-                        name='dense_{}'.format(idx)
-                    )(layer_stack[-1])
-                )
+            with tf.variable_scope('source_{}'.format(idx_source)):
+                layer_stacks[idx_source] = [in_layer]
 
-        for idx, layer_param in enumerate(recurr_params):
+                for idx, layer_param in enumerate(dense_params):
+                    with tf.variable_scope('conv_{}'.format(idx)):
+                        layer_stacks[idx_source].append(
+                            TimeDistributed(
+                                Dense(
+                                    layer_param.get('num_units', 3),
+                                    activation=layer_param.get('activation', None),
+                                    use_bias=layer_param.get('bias', True)
+                                ),
+                                input_shape=layer_stacks[idx_source][-1].get_shape().as_list()[2:],
+                                name='dense_{}'.format(idx)
+                            )(layer_stacks[idx_source][-1])
+                        )
 
-            last_layer = idx == (len(recurr_params) - 1)
-            with tf.variable_scope('lstms_{}'.format(idx)):
-                layer_stack.append(
-                    tf.keras.layers.LSTM(
-                        stateful=False,
-                        return_sequences=not last_layer,
-                        **layer_param
-                    )(layer_stack[-1])
-                )
+                for idx, layer_param in enumerate(recurr_params):
 
-            if last_layer:
-                embeds = layer_stack[-1]
+                    last_layer = idx == (len(recurr_params) - 1)
+                    with tf.variable_scope('lstms_{}'.format(idx)):
+                        layer_stacks[idx_source].append(
+                            tf.keras.layers.LSTM(
+                                stateful=False,
+                                return_sequences=not last_layer,
+                                **layer_param
+                            )(layer_stacks[idx_source][-1])
+                        )
+
+
+        embeds = tf.concat([
+            tf.contrib.layers.flatten(layer_stack[-1])
+            for layer_stack in layer_stacks.values()
+        ], axis=-1)
+
 
         out_layer_preact = [
             tf.expand_dims(
-                append_dense(self, layer_stack[-1], {'num_units': out_size}, 'preact_{}'.format(idx)),
+                append_dense(self, embeds, {'num_units': out_size}, 'preact_{}'.format(idx)),
             1)
             for idx, out_size in enumerate(out_sizes)
         ]

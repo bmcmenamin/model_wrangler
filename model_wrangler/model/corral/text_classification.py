@@ -5,7 +5,7 @@ import tensorflow as tf
 
 from model_wrangler.model.text_tools import TextProcessor
 
-from model_wrangler.architecture import BaseArchitecture
+from model_wrangler.architecture import BaseTextArchitecture
 from model_wrangler.model.layers import (
     append_dropout, append_batchnorm, append_dense, append_conv,
     append_maxpooling
@@ -13,48 +13,13 @@ from model_wrangler.model.layers import (
 from model_wrangler.model.losses import loss_softmax_ce
 
 
-class TextClassificationModel(BaseArchitecture):
+class TextClassificationModel(BaseTextArchitecture):
     """Convolutional feedforward model that has a
     couple convolutional layers and a couple of dense
     layers leading up to an output
     """
 
     # pylint: disable=too-many-instance-attributes
-
-    def __init__(self, params):
-        self.text_map = None
-        super().__init__(params)
-
-    def make_onehot_encode_layer(self, in_layer):
-        """Return a layer that one-hot encodes an int layer
-
-        Args:
-            in_layer: A layer consisting of integer values
-
-        Returns:
-            a new layer that has one-hot encoded the integers
-        """
-
-        onehot_layer = tf.one_hot(
-            tf.to_int32(in_layer),
-            len(self.text_map.good_chars) + 2,
-            axis=-1
-        )
-
-        return onehot_layer
-
-    @staticmethod
-    def make_onehot_decode_layer(in_layer):
-        """Return a layer takes one-hot encoded layer to int
-        Args:
-            in_layer: A of one-hot endcoded values
-
-        Returns:
-            a new layer with the index of the largest positive value
-        """
-
-        out_layer = tf.argmax(in_layer, axis=-1)
-        return out_layer
 
     def _conv_layer(self, in_layer, layer_param):
         layer_stack = [tf.to_float(in_layer)]
@@ -126,14 +91,14 @@ class TextClassificationModel(BaseArchitecture):
                         )
 
         # Flatten/concat output inputs from each convolutional stack
-        embedding_layer = tf.concat([
+        embeds = tf.concat([
             tf.contrib.layers.flatten(layer_stack[-1])
             for layer_stack in layer_stacks.values()
         ], axis=-1)
 
         # Add final dense layer to sum it up
         out_layer_preact = [
-            append_dense(self, embedding_layer, embed_params, 'preact_output_{}'.format(idx))
+            append_dense(self, embeds, embed_params, 'preact_output_{}'.format(idx))
             for idx, out_size in enumerate(out_sizes)
         ]
 
@@ -155,5 +120,4 @@ class TextClassificationModel(BaseArchitecture):
             [loss_softmax_ce(*pair) for pair in zip(out_layer_preact, target_layers)]
         )
 
-        embeds = None
         return in_layers, out_layers, target_layers, embeds, loss

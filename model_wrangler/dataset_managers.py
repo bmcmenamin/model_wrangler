@@ -351,6 +351,10 @@ class SequentialDatasetManager(BaseDatasetManager):
 
                 x, y = win[:self.in_win_len], win[-self.out_win_len:]
 
+                if isinstance(win[0], str):
+                    x = ''.join(x)
+                    y = ''.join(y)
+
                 X_batch[0].append(x)
                 Y_batch[0].append(y)
 

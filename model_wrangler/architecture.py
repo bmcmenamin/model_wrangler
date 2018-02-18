@@ -126,3 +126,44 @@ class BaseArchitecture(ABC):
                 pad_step_number=True,
                 max_to_keep=4
             )
+
+
+class BaseTextArchitecture(BaseArchitecture):
+    """Architecture set up to do stuff with text"""
+
+    # pylint: disable=too-many-instance-attributes
+
+    def __init__(self, params):
+        self.text_map = None
+        super().__init__(params)
+
+    def make_onehot_encode_layer(self, in_layer):
+        """Return a layer that one-hot encodes an int layer
+
+        Args:
+            in_layer: A layer consisting of integer values
+
+        Returns:
+            a new layer that has one-hot encoded the integers
+        """
+
+        onehot_layer = tf.one_hot(
+            tf.to_int32(in_layer),
+            len(self.text_map.good_chars) + 2,
+            axis=-1
+        )
+
+        return onehot_layer
+
+    @staticmethod
+    def make_onehot_decode_layer(in_layer):
+        """Return a layer takes one-hot encoded layer to int
+        Args:
+            in_layer: A of one-hot endcoded values
+
+        Returns:
+            a new layer with the index of the largest positive value
+        """
+
+        out_layer = tf.argmax(in_layer, axis=-1)
+        return out_layer

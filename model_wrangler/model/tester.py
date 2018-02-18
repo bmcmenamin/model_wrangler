@@ -83,4 +83,3 @@ class ModelTester(object):
         else:
             print("Things in the model changed after training. That's a good thing.")
 
-

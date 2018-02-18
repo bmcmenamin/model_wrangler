@@ -8,8 +8,8 @@ import logging
 
 import random
 
-from itertools import islice, cycle
-from collections import Iterable
+from itertools import islice, cycle, tee, chain
+from collections import Iterable, deque
 
 from abc import ABC, abstractmethod
 
@@ -49,43 +49,42 @@ class BaseDatasetManager(ABC):
         else:
             raise AttributeError('Input is not an array or an Iterable')
 
-    def _shuffle_data(self, X, Y):
+    @staticmethod
+    def _shuffle_data(X, Y):
         """Suffle input/output sample order"""
 
         new_order = list(range(len(X[0])))
         random.shuffle(new_order)
 
         X = [[x[i] for i in new_order] for x in X]
-        Y = [[y[i] for i in new_order] for y in Y]
+
+        if Y is not None:
+            Y = [[y[i] for i in new_order] for y in Y]
 
         return X, Y
 
-    def _yield_batches(self, X, Y, batch_size):
+    @staticmethod
+    def _yield_batches(X, Y, batch_size):
         for idx in range(0, len(X[0]), batch_size):
             X_batch = [x[idx:(idx + batch_size)] for x in X]
             Y_batch = [y[idx:(idx + batch_size)] for y in Y]
             yield X_batch, Y_batch
 
-    def _combine_list_of_generators(self, gen_list):
+    def _get_cache(self, gen_list):
         """Turn a list of generators into a single generator
         that returns a list of samples"""
-
-        out_list = [
-            list(islice(gen, self.cache_size))
-            for gen in gen_list
-        ]
-
+        out_list = list(zip(*list(islice(gen_list, self.cache_size))))
         yield out_list
 
-    def _input_to_generators(self, input, eternal=False):
-        gen = self._combine_list_of_generators(
-            [self._force_to_generators(x) for x in input]
-        )
+    def _input_to_generators(self, input_data, eternal=False):
+
+        gen_list = zip(*[self._force_to_generators(x) for x in input_data])
+        gen_cache = self._get_cache(gen_list)
 
         if eternal:
-            gen = cycle(gen)
+            gen_cache = cycle(gen_cache)
 
-        return gen
+        return gen_cache
 
     def __init__(self, X, Y, cache_size=2056):
         """
@@ -101,7 +100,7 @@ class BaseDatasetManager(ABC):
 
         self.num_inputs = len(X)
         self.num_outputs = len(Y)
-        self.cache_size = 2056
+        self.cache_size = cache_size
 
         self.X = X
         self.Y = Y
@@ -110,12 +109,15 @@ class BaseDatasetManager(ABC):
         LOGGER.info('Dataset has %d outputs', self.num_outputs)
 
     @abstractmethod
-    def get_next_batch(self, batch_size=32):
+    def get_next_batch(self, batch_size=32, eternal=False):
         """
         This generator should yield batches of training data
 
         Args:
             batch_size: int for number of samples in batch
+            eternal: Keep pulling samples forever, or stop after an epoch?
+                for some data, it's hard to know when an epoch is over so
+                you should use eternal and cap the number of batches
         Yields:
             X, Y: lists of input/output samples
         """
@@ -134,6 +136,9 @@ class DatasetManager(BaseDatasetManager):
 
         Args:
             batch_size: int for number of samples in batch
+            eternal: Keep pulling samples forever, or stop after an epoch?
+                for some data, it's hard to know when an epoch is over so
+                you should use eternal and cap the number of batches
         Yields:
             X, Y: lists of input/output samples
         """
@@ -143,31 +148,6 @@ class DatasetManager(BaseDatasetManager):
 
         for X, Y in zip(X_gen, Y_gen):
             X, Y = self._shuffle_data(X, Y)
-            for x, y in self._yield_batches(X, Y, batch_size):
-                yield x, y
-
-
-
-class SequentialDatasetManager(BaseDatasetManager):
-    """Dataset Manager for handling sequential inputs like
-    timeseries or text sequences in an RNN"""
-
-
-    def get_next_batch(self, batch_size=32, eternal=False):
-        """
-        This generator should yield batches of training data
-
-        Args:
-            batch_size: int for number of samples in batch
-            eternal: this generator runs forever and ever
-        Yields:
-            X, Y: lists of input/output samples
-        """
-
-        X_gen = self._input_to_generators(self.X, eternal=eternal)
-        Y_gen = self._input_to_generators(self.Y, eternal=eternal)
-
-        for X, Y in zip(X_gen, Y_gen):
             for x, y in self._yield_batches(X, Y, batch_size):
                 yield x, y
 
@@ -288,7 +268,9 @@ class BalancedDatasetManager(BaseDatasetManager):
             positive_classes: list of functions defining the 'positive class'
                 based on each output type
             batch_size: int for number of samples in batch
-            eternal: this generator runs forever and ever
+            eternal: Keep pulling samples forever, or stop after an epoch?
+                for some data, it's hard to know when an epoch is over so
+                you should use eternal and cap the number of batches
         Yields:
             X, Y: lists of input/output samples
         """
@@ -300,4 +282,103 @@ class BalancedDatasetManager(BaseDatasetManager):
         for X, Y in zip(X_gen, Y_gen):
             X, Y = self._shuffle_data(X, Y, positive_classes)
             for x, y in self._yield_batches(X, Y, batch_size):
+                yield x, y
+
+
+class SequentialDatasetManager(BaseDatasetManager):
+    """Dataset Manager for handling sequential inputs like
+    timeseries or text sequences in an RNN"""
+
+    @staticmethod
+    def _consume(iterator, n_steps):
+        """Advance an iterator n_steps ahead. If n is none, consume entirely."""
+        if n_steps is None:
+            deque(iterator, maxlen=0)
+        else:
+            next(islice(iterator, n_steps, n_steps), None)
+            
+    def _sliding_window(self, iterable, win_len=2):
+        "Return samples from a sliding window of length win_len"
+
+        if isinstance(iterable, np.ndarray):
+            iterable = iterable.ravel()
+
+        iters = tee(iterable, win_len)
+        for i, it in enumerate(iters):
+            self._consume(it, i)
+        return zip(*iters)
+
+    def __init__(self, X, in_win_len=16, out_win_len=1, cache_size=2056):
+        """
+        Args:
+          X: is a list of timeseries
+          in_win_len: is an integer for how wide the window is for model input
+          out_win_len: is an integer indicate how wide the window is
+            for model output 
+
+          cache_size: is the number of samples to cache internally
+            from the input generators. This list should be larger than the
+            batch sizes used in training because it's what gets randomly
+            shuffled across epochs
+        """
+
+        if len(X) != 1:
+            raise ValueError(
+                "Not currently supporting timeseries networks with multiple inputs "
+                "and you've currently entered {}".format(len(X))
+            )
+
+        self.num_inputs = len(X)
+        self.num_outputs = len(X)
+        self.cache_size = cache_size
+        self.in_win_len = in_win_len
+        self.out_win_len = out_win_len
+
+        self.X = X
+        self.Y = None
+
+        LOGGER.info('Dataset has %d inputs', self.num_inputs)
+
+    def _yield_batches(self, X, batch_size):
+
+        X_batch, Y_batch = [[]], [[]]
+        for seq in X[0]:
+
+            for win in self._sliding_window(iter(seq), win_len=self.in_win_len + self.out_win_len):
+
+                if len(X_batch) == batch_size:
+                    X_batch, Y_batch = [[]], [[]]
+
+                x, y = win[:self.in_win_len], win[-self.out_win_len:]
+
+                if isinstance(win[0], str):
+                    x = ''.join(x)
+                    y = ''.join(y)
+
+                X_batch[0].append(x)
+                Y_batch[0].append(y)
+
+                if len(X_batch[0]) == batch_size:
+                    yield X_batch, Y_batch
+
+        yield X_batch, Y_batch
+
+    def get_next_batch(self, batch_size=32, eternal=False):
+        """
+        This generator should yield batches of training data
+
+        Args:
+            batch_size: int for number of samples in batch
+            eternal: Keep pulling samples forever, or stop after an epoch?
+                for some data, it's hard to know when an epoch is over so
+                you should use eternal and cap the number of batches
+        Yields:
+            X, Y: lists of input/output samples
+        """
+
+        X_gen = self._input_to_generators(self.X, eternal=eternal)
+
+        for X in X_gen:
+            X = self._shuffle_data(X, None)[0]
+            for x, y in self._yield_batches(X, batch_size):
                 yield x, y

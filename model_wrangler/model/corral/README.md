@@ -37,3 +37,6 @@ Current models:
 * `convolutional_siamese`: Convolutional networks trained with siamese pairs
 
 * `text_classification`: A convoluional feedforward net that takes strings as inputs and does all the conversion to numerics internally
+
+* `lstm`: A recurrent net that will numeric tiemseries data
+* `text_lstm`: A recurrent net that will predict the next letter in a sequence

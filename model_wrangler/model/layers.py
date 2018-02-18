@@ -132,6 +132,27 @@ def append_dense(architecture, input_layer, layer_config, name):
     return dense_layer
 
 
+def append_timedense(architecture, input_layer, layer_config, name):
+    """Add tiem distributed dense connections to a layer
+
+    Args:
+        architecture: model architecture object
+        input_layer: the previous layer that feeds into this
+        layer_config: dict of layer params
+            'num_units' -> int or list of <dim> ints, default = 5
+            'activation' -> activation function, default = 'None'
+            'bias' -> bool for bias on/off, default = 'True'
+            'activity_reg' -> dict of regularization:strength pair, default = {}
+        name: layer name
+
+    Returns:
+        TF layer with dense added
+    """
+
+
+    return None
+
+
 def append_conv(architecture, input_layer, layer_config, name):
     """Add convolutions to a layer
 

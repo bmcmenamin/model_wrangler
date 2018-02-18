@@ -42,14 +42,15 @@ class TextProcessor(object):
         char_list = list(unidecode(str(in_string, 'utf-8')))
 
         if use_pad and self.pad_len is not None:
-            char_list = char_list[:self.pad_len]
+            char_list = char_list[-self.pad_len:]
 
         int_list = [self.char_to_int.get(c, self.missing_char_idx) for c in char_list]
 
         char_len = len(char_list)
         if use_pad and self.pad_len is not None and char_len < self.pad_len:
             pad_size = self.pad_len - char_len
-            int_list.extend([self.pad_char_idx] * pad_size)
+            pad = [self.pad_char_idx] * pad_size
+            int_list = pad + int_list
 
         return int_list
 

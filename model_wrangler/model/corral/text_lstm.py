@@ -40,7 +40,7 @@ class TextLstmModel(BaseTextArchitecture):
         recurr_params = params.get('recurr_params', [])
         out_sizes = params.get('out_sizes', [])
 
-        pad_len = params.get('max_string_size', 256)
+        pad_len = max([i[0] for i in in_sizes])
         self.text_map = TextProcessor(pad_len=pad_len)
 
         _func_str_to_int = lambda x_list: np.vstack([

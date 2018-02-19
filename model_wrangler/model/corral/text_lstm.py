@@ -49,7 +49,7 @@ class TextLstmModel(BaseTextArchitecture):
         ])
 
         _func_char_to_int = lambda x_list: np.vstack([
-            np.array(self.text_map.string_to_ints(x, use_pad=False))
+            np.array(self.text_map.string_to_ints(x, use_pad=False)[0])
             for x in x_list
         ])
 

@@ -112,7 +112,9 @@ class ModelWrangler(object):
 
         self.tf_mod = model_class(model_params)
 
-        self.session_params = set_max_threads(set_session_params())
+        self.session_params = set_max_threads(set_session_params({
+	    'log_device_placement': True
+	}))
         self.sess = self.new_session()
         
         self.initialize()

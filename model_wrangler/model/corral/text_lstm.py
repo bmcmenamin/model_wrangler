@@ -116,7 +116,9 @@ class TextLstmModel(BaseTextArchitecture):
         ]
 
         out_layers = [
-            tf.py_func(_func_int_to_str, [tf.argmax(out)], tf.string)
+            tf.py_func(_func_int_to_str, [
+                self.make_onehot_decode_layer(out, probabilistic=True)
+            ], tf.string)
             for out in out_layers_preact
         ]
 

@@ -38,7 +38,6 @@ class LstmModel(BaseArchitecture):
         #
 
         in_sizes = params.get('in_sizes', [])
-        dense_params = params.get('dense_params', [])
         recurr_params = params.get('recurr_params', [])
         out_sizes = params.get('out_sizes', [])
 
@@ -57,20 +56,6 @@ class LstmModel(BaseArchitecture):
 
             with tf.variable_scope('source_{}'.format(idx_source)):
                 layer_stacks[idx_source] = [in_layer]
-
-                for idx, layer_param in enumerate(dense_params):
-                    with tf.variable_scope('conv_{}'.format(idx)):
-                        layer_stacks[idx_source].append(
-                            TimeDistributed(
-                                Dense(
-                                    layer_param.get('num_units', 3),
-                                    activation=layer_param.get('activation', None),
-                                    use_bias=layer_param.get('bias', True)
-                                ),
-                                input_shape=layer_stacks[idx_source][-1].get_shape().as_list()[2:],
-                                name='dense_{}'.format(idx)
-                            )(layer_stacks[idx_source][-1])
-                        )
 
                 for idx, layer_param in enumerate(recurr_params):
 

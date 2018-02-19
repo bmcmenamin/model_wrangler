@@ -26,21 +26,13 @@ LSTM_PARAMS = {
     'graph': {
         'max_string_size': 128,
         'in_sizes': [[16, 1]],
-        'dense_params': [
-            {
-                'num_units': 4,
-                'bias': True,
-                'activation': 'relu',
-            },
-            {
-                'num_units': 4,
-                'bias': True,
-                'activation': 'relu',
-            }
-        ],
         'recurr_params': [
             {
                 'units': 5,
+                'activation': 'relu'
+            },
+            {
+                'units': 2,
                 'activation': 'relu'
             }
         ],

@@ -386,3 +386,42 @@ def fit_to_shape(architecture, in_layer, layer_config, name):
 
     return in_layer_padded_trimmed
 
+
+def append_bidir_lstm_stack(architecture, input_layer, layer_configs, name):
+    """Adds stacked RNN layers"""
+
+
+    cells_fw = [
+        tf.contrib.rnn.DropoutWrapper(
+            tf.nn.rnn_cell.BasicLSTMCell(
+                layer_param['units'],
+                activation=get_param_functions(layer_param)[0],
+                name='{}_{}'.format(name, idx)
+            ),
+            state_keep_prob=1 - layer_param.get('dropout', 0.0)
+        )
+        for idx, layer_param in enumerate(layer_configs)
+    ]
+
+    cells_bw = [
+        tf.contrib.rnn.DropoutWrapper(
+            tf.nn.rnn_cell.BasicLSTMCell(
+                layer_param['units'],
+                activation=get_param_functions(layer_param)[0],
+                name='{}_{}'.format(name, idx)
+            ),
+            state_keep_prob=1 - layer_param.get('dropout', 0.0)
+        )
+        for idx, layer_param in enumerate(layer_configs)
+    ]
+
+    output_sequence, _, _ = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(
+        cells_fw=cells_fw,
+        cells_bw=cells_bw,
+        inputs=input_layer,
+        dtype=tf.float32
+    )
+
+    outputs = output_sequence[:, -1, ...]
+
+    return outputs

@@ -16,6 +16,20 @@ class LstmModel(BaseArchitecture):
 
     # pylint: disable=too-many-instance-attributes
 
+    def setup_training_step(self, params):
+        """Set up loss and training step"""
+
+        # Import params
+        learning_rate = params.get('learning_rate', 0.01)
+
+        optimizer = tf.train.RMSPropOptimizer(learning_rate)
+
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        with tf.control_dependencies(update_ops):
+            train_step = optimizer.minimize(self.loss)
+
+        return train_step
+
     def setup_layers(self, params):
         """Build all the model layers"""
 

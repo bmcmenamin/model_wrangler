@@ -292,8 +292,6 @@ class ModelWrangler(object):
         on the model using a bunch of input_x, target_y
         """
         num_epochs = self.training_params.get('num_epochs', 1)
-
-
         epoch_length = self.training_params.get('epoch_length', None)
         batch_size = self.training_params.get('batch_size', 32)
 

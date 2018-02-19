@@ -346,7 +346,7 @@ class SequentialDatasetManager(BaseDatasetManager):
 
             for win in self._sliding_window(iter(seq), win_len=self.in_win_len + self.out_win_len):
 
-                if len(X_batch) == batch_size:
+                if len(X_batch[0]) == batch_size:
                     X_batch, Y_batch = [[]], [[]]
 
                 x, y = win[:self.in_win_len], win[-self.out_win_len:]

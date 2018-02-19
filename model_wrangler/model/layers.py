@@ -423,5 +423,30 @@ def append_bidir_lstm_stack(architecture, input_layer, layer_configs, name):
     )
 
     outputs = output_sequence[:, -1, ...]
-
     return outputs
+
+
+def append_lstm_stack(architecture, input_layer, layer_configs, name):
+    """Adds stacked RNN layers"""
+
+    cells = [
+        tf.contrib.rnn.DropoutWrapper(
+            tf.nn.rnn_cell.BasicLSTMCell(
+                layer_param['units'],
+                activation=get_param_functions(layer_param)[0],
+                name='{}_{}'.format(name, idx)
+            ),
+            state_keep_prob=1 - layer_param.get('dropout', 0.0)
+        )
+        for idx, layer_param in enumerate(layer_configs)
+    ]
+
+    outputs, final_state = tf.nn.dynamic_rnn(
+        cell=tf.nn.rnn_cell.MultiRNNCell(cells),
+        inputs=input_layer,
+        dtype=tf.float32,
+        time_major=False
+    )
+
+    output = outputs[:, -1, ...]
+    return output

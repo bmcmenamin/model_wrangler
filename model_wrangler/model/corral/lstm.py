@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 from model_wrangler.architecture import BaseArchitecture
-from model_wrangler.model.layers import append_dense, append_bidir_lstm_stack
+from model_wrangler.model.layers import append_dense, append_lstm_stack
 from model_wrangler.model.losses import loss_mse
 
 class LstmModel(BaseArchitecture):
@@ -56,7 +56,7 @@ class LstmModel(BaseArchitecture):
 
                 with tf.variable_scope('lstm_stack'):
                     layer_stacks[idx_source].append(
-                        append_bidir_lstm_stack(self, layer_stacks[idx_source][-1], recurr_params, 'lstm')
+                        append_lstm_stack(self, layer_stacks[idx_source][-1], recurr_params, 'lstm')
                     )
 
         embeds = tf.concat([

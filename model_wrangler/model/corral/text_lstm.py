@@ -7,7 +7,7 @@ import tensorflow as tf
 from model_wrangler.model.text_tools import TextProcessor
 
 from model_wrangler.architecture import BaseTextArchitecture
-from model_wrangler.model.layers import append_dense, append_bidir_lstm_stack
+from model_wrangler.model.layers import append_dense, append_lstm_stack
 from model_wrangler.model.losses import loss_softmax_ce
 
 class TextLstmModel(BaseTextArchitecture):
@@ -85,7 +85,7 @@ class TextLstmModel(BaseTextArchitecture):
 
                 with tf.variable_scope('lstm_stack'):
                     layer_stacks[idx_source].append(
-                        append_bidir_lstm_stack(self, layer_stacks[idx_source][-1], recurr_params, 'lstm')
+                        append_lstm_stack(self, layer_stacks[idx_source][-1], recurr_params, 'lstm')
                     )
 
         # Flatten/concat output inputs from each convolutional stack

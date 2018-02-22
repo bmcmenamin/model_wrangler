@@ -422,8 +422,7 @@ def append_bidir_lstm_stack(architecture, input_layer, layer_configs, name):
         dtype=tf.float32
     )
 
-    outputs = output_sequence[:, -1, ...]
-    return outputs
+    return output_sequence
 
 
 def append_lstm_stack(architecture, input_layer, layer_configs, name):
@@ -448,5 +447,10 @@ def append_lstm_stack(architecture, input_layer, layer_configs, name):
         time_major=False
     )
 
-    output = outputs[:, -1, ...]
+    output = tf.layers.batch_normalization(
+        outputs[:, -1, ...],
+        training=architecture.is_training,
+        name=name
+    )
+
     return output

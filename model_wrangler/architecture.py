@@ -69,11 +69,16 @@ class BaseArchitecture(ABC):
 
         return in_layers, out_layers, target_layers, embeds, loss
 
-    def setup_tensorboard_tracking(self, tb_log_path, name, tensor):
+    def setup_tensorboard_writers(self, tb_log_path, writers):
         """Set up summary stats to track in tensorboard"""
 
-        tf.summary.scalar(name, tensor)
-        tb_writer = tf.summary.FileWriter(tb_log_path, self.graph)
+        tb_writer = {
+            'graph': tf.summary.FileWriter(tb_log_path, self.graph),
+        }
+
+        for w in writers:
+            tb_writer[w] = tf.summary.FileWriter(os.path.join(tb_log_path, w))
+
         return tb_writer
 
     def setup_training_step(self, params):
@@ -100,7 +105,6 @@ class BaseArchitecture(ABC):
             os.path.abspath(params['path']),
             '{}-{}'.format(params['name'], 0)
         )
-        print(meta_filename)
 
         self.inputs = None
         self.outputs = None
@@ -117,11 +121,12 @@ class BaseArchitecture(ABC):
             self.inputs, self.outputs, self.targets, self.embeds, self.loss = self.setup_layers(graph_params)
             self.train_step = self.setup_training_step(train_params)
 
-            self.tb_writer = {
-                'training_loss': self.setup_tensorboard_tracking(params['path'], 'training_loss', self.loss),
-                'validation_loss': self.setup_tensorboard_tracking(params['path'], 'validation_loss', self.loss),
-            }
+            self.tb_writer = self.setup_tensorboard_writers(
+                params['path'],
+                ['training_loss', 'validation_loss']
+            )
 
+            tf.summary.scalar('loss', self.loss)
             self.tb_stats = tf.summary.merge_all()
 
             self.saver = tf.train.Saver(

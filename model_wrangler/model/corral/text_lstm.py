@@ -101,7 +101,10 @@ class TextLstmModel(BaseTextArchitecture):
             append_dense(
                 self,
                 embeds,
-                {'num_units': self.text_map.num_chars + 2},
+                {
+		    'num_units': self.text_map.num_chars + 2,
+		    'activation': 'relu'
+		},
                 'preact_{}'.format(idx)
             )
             for idx, _ in enumerate(out_sizes)
@@ -109,7 +112,7 @@ class TextLstmModel(BaseTextArchitecture):
 
         out_layers = [
             tf.py_func(_func_int_to_str, [
-                self.make_onehot_decode_layer(out, probabilistic=True)
+                self.make_onehot_decode_layer(tf.nn.softmax(out), probabilistic=True)
             ], tf.string)
             for out in out_layers_preact
         ]

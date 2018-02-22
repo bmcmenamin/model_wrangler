@@ -447,10 +447,6 @@ def append_lstm_stack(architecture, input_layer, layer_configs, name):
         time_major=False
     )
 
-    output = tf.layers.batch_normalization(
-        outputs[:, -1, ...],
-        training=architecture.is_training,
-        name=name
-    )
+    output = outputs[:, -1, ...]
 
     return output

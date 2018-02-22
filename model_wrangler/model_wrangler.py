@@ -274,12 +274,16 @@ class ModelWrangler(object):
             self.sess.run(self.tf_mod.train_step, feed_dict=data_dict)
 
             if train_verbose and ((batch_counter % train_verbose_interval) == 0):
-                ho_in, ho_out = next(self.holdout_gen)
-
-                data_dict = self.make_data_dict(ho_in, ho_out, is_training=False)
 
                 # Write training stats to tensorboard
-                self.tf_mod.tb_writer.add_summary(
+                self.tf_mod.tb_writer['training_loss'].add_summary(
+                    self.sess.run(self.tf_mod.tb_stats, feed_dict=data_dict),
+                    batch_counter
+                )
+
+                ho_in, ho_out = next(self.holdout_gen)
+                data_dict = self.make_data_dict(ho_in, ho_out, is_training=False)
+                self.tf_mod.tb_writer['validation_loss'].add_summary(
                     self.sess.run(self.tf_mod.tb_stats, feed_dict=data_dict),
                     batch_counter
                 )

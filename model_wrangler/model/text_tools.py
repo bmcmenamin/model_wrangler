@@ -58,5 +58,5 @@ class TextProcessor(object):
         """Take a list of ints, turn them into a single string"""
 
         char_list = [self.int_to_char.get(c, self.pad_char_idx) for c in in_ints]
-        out_string = str(''.join(char_list), 'utf-8')
+        out_string = str(''.join(char_list))
         return out_string

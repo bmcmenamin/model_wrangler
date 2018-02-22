@@ -410,7 +410,9 @@ def append_bidir_lstm_stack(architecture, input_layer, layer_configs, name):
                 activation=get_param_functions(layer_param)[0],
                 name='{}_{}'.format(name, idx)
             ),
-            state_keep_prob=1 - layer_param.get('dropout', 0.0)
+            input_keep_prob=1 - layer_param.get('dropout', 0.0),
+            state_keep_prob=1 - layer_param.get('dropout', 0.0),
+            output_keep_prob=1 - layer_param.get('dropout', 0.0)
         )
         for idx, layer_param in enumerate(layer_configs)
     ]
@@ -435,7 +437,9 @@ def append_lstm_stack(architecture, input_layer, layer_configs, name):
                 activation=get_param_functions(layer_param)[0],
                 name='{}_{}'.format(name, idx)
             ),
-            state_keep_prob=1 - layer_param.get('dropout', 0.0)
+            input_keep_prob=1 - layer_param.get('dropout', 0.0),
+            state_keep_prob=1 - layer_param.get('dropout', 0.0),
+            output_keep_prob=1 - layer_param.get('dropout', 0.0)
         )
         for idx, layer_param in enumerate(layer_configs)
     ]

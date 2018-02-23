@@ -29,11 +29,11 @@ LSTM_PARAMS = {
         'recurr_params': [
             {
                 'units': 5,
-                'activation': 'relu'
+                'dropout': 0.1,        
             },
             {
-                'units': 2,
-                'activation': 'relu'
+                'units': 5,
+                'dropout': 0.1,        
             }
         ],
         'out_sizes': [1],
@@ -105,12 +105,12 @@ def test_lstm_text():
     print("Loss: {}".format(lstm_model.score(*xy_test)))
 
 if __name__ == "__main__":
-
+    """
     print("\n\n LSTM unit tests")
     ModelTester(
         ModelWrangler(LstmModel, LSTM_PARAMS)
     )
-
+    """
     print("\n\ne2e testing numeric LSTM")
     test_lstm_numeric()
 

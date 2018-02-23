@@ -390,26 +390,19 @@ def fit_to_shape(architecture, in_layer, layer_config, name):
 def append_bidir_lstm_stack(architecture, input_layer, layer_configs, name):
     """Adds stacked RNN layers"""
 
-
     cells_fw = [
         tf.contrib.rnn.DropoutWrapper(
-            tf.nn.rnn_cell.BasicLSTMCell(
-                layer_param['units'],
-                activation=get_param_functions(layer_param)[0],
-                name='{}_{}'.format(name, idx)
-            ),
-            state_keep_prob=1 - layer_param.get('dropout', 0.0)
+            tf.contrib.cudnn_rnn.CudnnCompatibleLSTMCell(layer_param['units']),
+            input_keep_prob=1 - layer_param.get('dropout', 0.0),
+            state_keep_prob=1 - layer_param.get('dropout', 0.0),
+            output_keep_prob=1 - layer_param.get('dropout', 0.0)
         )
         for idx, layer_param in enumerate(layer_configs)
     ]
 
     cells_bw = [
         tf.contrib.rnn.DropoutWrapper(
-            tf.nn.rnn_cell.BasicLSTMCell(
-                layer_param['units'],
-                activation=get_param_functions(layer_param)[0],
-                name='{}_{}'.format(name, idx)
-            ),
+            tf.contrib.cudnn_rnn.CudnnCompatibleLSTMCell(layer_param['units']),
             input_keep_prob=1 - layer_param.get('dropout', 0.0),
             state_keep_prob=1 - layer_param.get('dropout', 0.0),
             output_keep_prob=1 - layer_param.get('dropout', 0.0)
@@ -418,8 +411,8 @@ def append_bidir_lstm_stack(architecture, input_layer, layer_configs, name):
     ]
 
     output_sequence, _, _ = tf.contrib.rnn.stack_bidirectional_dynamic_rnn(
-        cells_fw=cells_fw,
-        cells_bw=cells_bw,
+        cells_fw=tf.nn.rnn_cell.MultiRNNCell(cells_fw),
+        cells_bw=tf.nn.rnn_cell.MultiRNNCell(cells_bw),
         inputs=input_layer,
         dtype=tf.float32
     )
@@ -432,11 +425,7 @@ def append_lstm_stack(architecture, input_layer, layer_configs, name):
 
     cells = [
         tf.contrib.rnn.DropoutWrapper(
-            tf.nn.rnn_cell.BasicLSTMCell(
-                layer_param['units'],
-                activation=get_param_functions(layer_param)[0],
-                name='{}_{}'.format(name, idx)
-            ),
+            tf.contrib.cudnn_rnn.CudnnCompatibleLSTMCell(layer_param['units']),
             input_keep_prob=1 - layer_param.get('dropout', 0.0),
             state_keep_prob=1 - layer_param.get('dropout', 0.0),
             output_keep_prob=1 - layer_param.get('dropout', 0.0)
@@ -444,7 +433,7 @@ def append_lstm_stack(architecture, input_layer, layer_configs, name):
         for idx, layer_param in enumerate(layer_configs)
     ]
 
-    outputs, final_state = tf.nn.dynamic_rnn(
+    outputs, _ = tf.nn.dynamic_rnn(
         cell=tf.nn.rnn_cell.MultiRNNCell(cells),
         inputs=input_layer,
         dtype=tf.float32,

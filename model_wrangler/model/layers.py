@@ -393,8 +393,6 @@ def append_bidir_lstm_stack(architecture, input_layer, layer_configs, name):
     cells_fw = [
         tf.contrib.rnn.DropoutWrapper(
             tf.contrib.cudnn_rnn.CudnnCompatibleLSTMCell(layer_param['units']),
-            input_keep_prob=1 - layer_param.get('dropout', 0.0),
-            state_keep_prob=1 - layer_param.get('dropout', 0.0),
             output_keep_prob=1 - layer_param.get('dropout', 0.0)
         )
         for idx, layer_param in enumerate(layer_configs)
@@ -403,8 +401,6 @@ def append_bidir_lstm_stack(architecture, input_layer, layer_configs, name):
     cells_bw = [
         tf.contrib.rnn.DropoutWrapper(
             tf.contrib.cudnn_rnn.CudnnCompatibleLSTMCell(layer_param['units']),
-            input_keep_prob=1 - layer_param.get('dropout', 0.0),
-            state_keep_prob=1 - layer_param.get('dropout', 0.0),
             output_keep_prob=1 - layer_param.get('dropout', 0.0)
         )
         for idx, layer_param in enumerate(layer_configs)
@@ -426,8 +422,6 @@ def append_lstm_stack(architecture, input_layer, layer_configs, name):
     cells = [
         tf.contrib.rnn.DropoutWrapper(
             tf.contrib.cudnn_rnn.CudnnCompatibleLSTMCell(layer_param['units']),
-            input_keep_prob=1 - layer_param.get('dropout', 0.0),
-            state_keep_prob=1 - layer_param.get('dropout', 0.0),
             output_keep_prob=1 - layer_param.get('dropout', 0.0)
         )
         for idx, layer_param in enumerate(layer_configs)

@@ -114,7 +114,7 @@ class ModelWrangler(object):
 
         self.session_params = set_max_threads(
             set_session_params(
-                {'log_device_placement': True}
+                {'log_device_placement': False}
             )
         )
 

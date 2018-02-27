@@ -110,9 +110,9 @@ if __name__ == "__main__":
     ModelTester(
         ModelWrangler(LstmModel, LSTM_PARAMS)
     )
-    """
     print("\n\ne2e testing numeric LSTM")
     test_lstm_numeric()
+    """
 
     print("\n\ne2e testing text LSTM")
     test_lstm_text()

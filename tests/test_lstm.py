@@ -24,7 +24,6 @@ LSTM_PARAMS = {
     'name': 'test_lstm',
     'path': './tests/test_lstm',
     'graph': {
-        'max_string_size': 128,
         'in_sizes': [[16, 1]],
         'recurr_params': [
             {
@@ -40,6 +39,24 @@ LSTM_PARAMS = {
     }
 }
 
+LSTM_TEXT_PARAMS = {
+    'name': 'test_lstm',
+    'path': './tests/test_lstm',
+    'graph': {
+        'win_length': 17,
+        'embed_size': 9,
+        'recurr_params': [
+            {
+                'units': 5,
+                'dropout': 0.1,        
+            },
+            {
+                'units': 5,
+                'dropout': 0.1,        
+            }
+        ]
+    }
+}
 
 def make_numeric_testdata(series_length=256, n_samp=1000):
     """Make sample data for linear regression"""
@@ -90,12 +107,12 @@ def test_lstm_text():
 
     dm = SequentialDatasetManager(
         X,
-        in_win_len=LSTM_PARAMS['graph']['in_sizes'][0][0],
-        out_win_len=LSTM_PARAMS['graph']['out_sizes'][0],
+        in_win_len=LSTM_TEXT_PARAMS['graph']['win_length'],
+        out_win_len=1,
         cache_size=128
     )
 
-    lstm_model = ModelWrangler(TextLstmModel, LSTM_PARAMS)
+    lstm_model = ModelWrangler(TextLstmModel, LSTM_TEXT_PARAMS)
     lstm_model.add_data(dm, dm)
 
     xy_test = next(dm.get_next_batch(batch_size=128))

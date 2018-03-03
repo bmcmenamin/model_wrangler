@@ -144,7 +144,28 @@ class BaseTextArchitecture(BaseArchitecture):
 
     def __init__(self, params):
         self.text_map = None
+        self.char_embeddings = None
         super().__init__(params)
+
+    def make_embedding_layer(self, embed_size=None):
+
+        vocab_size = len(self.text_map.good_chars) + 2
+        if not embed_size:
+            embed_size = vocab_size
+
+        char_embeds = tf.get_variable("char_embeddings", [vocab_size, embed_size])
+
+        return char_embeds
+
+
+    def get_embeddings(self, lookup_list):
+
+        out_embeds = tf.nn.embedding_lookup(
+            self.char_embeddings,
+            lookup_list
+        )
+        return out_embeds
+
 
     def make_onehot_encode_layer(self, in_layer):
         """Return a layer that one-hot encodes an int layer

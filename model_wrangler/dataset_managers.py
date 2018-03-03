@@ -296,7 +296,7 @@ class SequentialDatasetManager(BaseDatasetManager):
             deque(iterator, maxlen=0)
         else:
             next(islice(iterator, n_steps, n_steps), None)
-            
+
     def _sliding_window(self, iterable, win_len=2):
         "Return samples from a sliding window of length win_len"
 

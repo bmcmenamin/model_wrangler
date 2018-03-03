@@ -95,7 +95,7 @@ def test_text_ff():
 
 if __name__ == "__main__":
 
-    print("\n\nunit testing text convolutional model")
+    #print("\n\nunit testing text convolutional model")
     #ModelTester(
     #    ModelWrangler(TextClassificationModel, CONV_PARAMS)
     #)

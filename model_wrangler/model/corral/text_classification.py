@@ -55,6 +55,7 @@ class TextClassificationModel(BaseTextArchitecture):
         out_sizes = params.get('out_sizes', [])
 
         self.text_map = TextProcessor(pad_len=pad_len)
+        self.char_embeddings = self.make_embedding_layer()
 
         #
         # Build model
@@ -83,7 +84,7 @@ class TextClassificationModel(BaseTextArchitecture):
         layer_stacks = {}
         for idx_source, in_layer in enumerate(in_layers_int):
             with tf.variable_scope('source_{}'.format(idx_source)):
-                layer_stacks[idx_source] = [self.make_onehot_encode_layer(in_layer)]
+                layer_stacks[idx_source] = [self.get_embeddings(in_layer)]
                 for idx_layer, layer_param in enumerate(hidden_params):
                     with tf.variable_scope('params_{}'.format(idx_layer)):
                         layer_stacks[idx_source].append(

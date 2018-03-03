@@ -39,7 +39,12 @@ class TextProcessor(object):
     def string_to_ints(self, in_string, use_pad=True):
         """Take a sting, and turn it into a list of integers"""
 
-        char_list = list(unidecode(str(in_string, 'utf-8')))
+        try:
+            in_string = str(in_string, 'utf-8')
+        except TypeError:
+            pass
+
+        char_list = list(unidecode(in_string))
 
         if use_pad and self.pad_len is not None:
             char_list = char_list[-self.pad_len:]

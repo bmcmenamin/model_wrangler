@@ -133,7 +133,7 @@ def append_dense(architecture, input_layer, layer_config, name):
 
 
 def append_timedense(architecture, input_layer, layer_config, name):
-    """Add tiem distributed dense connections to a layer
+    """Add time distributed dense connections to a layer
 
     Args:
         architecture: model architecture object
@@ -148,7 +148,6 @@ def append_timedense(architecture, input_layer, layer_config, name):
     Returns:
         TF layer with dense added
     """
-
 
     return None
 
@@ -393,7 +392,7 @@ def append_bidir_lstm_stack(architecture, input_layer, layer_configs, name):
     cells_fw = [
         tf.contrib.rnn.DropoutWrapper(
             tf.contrib.cudnn_rnn.CudnnCompatibleLSTMCell(layer_param['units']),
-            output_keep_prob=1 - layer_param.get('dropout', 0.0)
+            input_keep_prob=1 - layer_param.get('dropout', 0.0)
         )
         for idx, layer_param in enumerate(layer_configs)
     ]
@@ -401,7 +400,7 @@ def append_bidir_lstm_stack(architecture, input_layer, layer_configs, name):
     cells_bw = [
         tf.contrib.rnn.DropoutWrapper(
             tf.contrib.cudnn_rnn.CudnnCompatibleLSTMCell(layer_param['units']),
-            output_keep_prob=1 - layer_param.get('dropout', 0.0)
+            input_keep_prob=1 - layer_param.get('dropout', 0.0)
         )
         for idx, layer_param in enumerate(layer_configs)
     ]
@@ -422,7 +421,7 @@ def append_lstm_stack(architecture, input_layer, layer_configs, name):
     cells = [
         tf.contrib.rnn.DropoutWrapper(
             tf.contrib.cudnn_rnn.CudnnCompatibleLSTMCell(layer_param['units']),
-            output_keep_prob=1 - layer_param.get('dropout', 0.0)
+            input_keep_prob=1 - layer_param.get('dropout', 0.0)
         )
         for idx, layer_param in enumerate(layer_configs)
     ]
@@ -434,6 +433,6 @@ def append_lstm_stack(architecture, input_layer, layer_configs, name):
         time_major=False
     )
 
-    output = outputs[:, -1, ...]
+    #output = outputs[:, -1, ...]
 
-    return output
+    return outputs

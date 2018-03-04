@@ -327,7 +327,7 @@ class ModelWrangler(object):
         except KeyboardInterrupt:
             print('Force exiting training.')
 
-    def get_from_model(self, name_to_find):
+    def get_from_model(self, name_to_find, data_dict):
         """Return a piece of the model by it's name"""
 
         if name_to_find not in self.tf_mod.graph._names_in_use:
@@ -339,6 +339,6 @@ class ModelWrangler(object):
         else:
             tensor_item = self.tf_mod.graph.get_tensor_by_name(name_to_find)
 
-        value_item = self.sess.run(tensor_item)
+        value_item = self.sess.run(tensor_item, feed_dict=data_dict)
         return value_item
 

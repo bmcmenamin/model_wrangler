@@ -148,24 +148,30 @@ class BaseTextArchitecture(BaseArchitecture):
         super().__init__(params)
 
     def make_embedding_layer(self, embed_size=None):
+        """Initialize the set of embedding vectors"""
 
         vocab_size = len(self.text_map.good_chars) + 2
         if not embed_size:
             embed_size = vocab_size
 
-        char_embeds = tf.get_variable("char_embeddings", [vocab_size, embed_size])
+        char_embeds = tf.get_variable(
+            "char_embeddings",
+            [vocab_size, embed_size],
+            initializer=tf.orthogonal_initializer
+        )
 
+        char_embeds = char_embeds / tf.norm(char_embeds, axis=1, keepdims=True)
         return char_embeds
 
-
     def get_embeddings(self, lookup_list):
+        """Get the embedding vectors for a list of inputs"""
 
         out_embeds = tf.nn.embedding_lookup(
             self.char_embeddings,
-            lookup_list
+            lookup_list,
+            max_norm=1.0
         )
         return out_embeds
-
 
     def make_onehot_encode_layer(self, in_layer):
         """Return a layer that one-hot encodes an int layer
@@ -186,7 +192,7 @@ class BaseTextArchitecture(BaseArchitecture):
         return onehot_layer
 
     @staticmethod
-    def make_onehot_decode_layer(in_layer, probabilistic=False, temp=0.0):
+    def make_onehot_decode_layer(in_layer, probabilistic=False, temp=5.0):
         """Return a layer takes one-hot encoded layer to int
         Args:
             in_layer: A of one-hot endcoded values
@@ -199,8 +205,8 @@ class BaseTextArchitecture(BaseArchitecture):
         """
 
         if probabilistic:
-            out_layer = tf.multinomial(tf.log(tf.nn.softmax(in_layer - temp, axis=-1)), 1)
+            out_layer = tf.multinomial(tf.log(tf.nn.softmax(in_layer * temp, axis=-1)), 1)
         else:
-            out_layer = tf.argmax(in_layer, axis=-1)
+            out_layer = tf.reshape(tf.argmax(in_layer, axis=-1), [-1, 1])
 
         return out_layer

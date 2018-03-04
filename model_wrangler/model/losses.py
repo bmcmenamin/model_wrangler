@@ -35,8 +35,8 @@ def loss_softmax_ce(observed, actual):
     """Calculate softmax cross entropy loss"""
 
     per_sample_loss = tf.nn.softmax_cross_entropy_with_logits_v2(
-        labels=actual,
-        logits=observed
+        logits=observed,
+        labels=actual
     )
     numel = tf.reduce_prod(tf.size(observed))
     per_batch_loss = tf.reduce_sum(per_sample_loss) / tf.cast(numel, tf.float32)

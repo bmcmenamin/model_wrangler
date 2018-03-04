@@ -50,11 +50,6 @@ class TextLstmModel(BaseTextArchitecture):
             for x in x_list
         ])
 
-        _func_char_to_int = lambda x_list: np.vstack([
-            np.array(self.text_map.string_to_ints(x, use_pad=False)[0])
-            for x in x_list
-        ])
-
         _func_int_to_str = lambda x_list: [
             self.text_map.ints_to_string(x)
             for x in x_list
@@ -69,12 +64,27 @@ class TextLstmModel(BaseTextArchitecture):
 
         target_layer = tf.placeholder("string", name="target", shape=[None,])
 
-        with tf.variable_scope('input_embbedding'):
+        with tf.variable_scope('input'):
 
-            in_layers_int = tf.py_func(_func_str_to_int, [in_layer], tf.int64)
+            in_layers_int = tf.py_func(_func_str_to_int, [in_layer], tf.int64, name='int')
             in_layers_int.set_shape([None, in_size])
 
-            in_layers_embed = self.get_embeddings(in_layers_int)
+            in_layers_onehot = tf.reshape(
+                tf.one_hot(
+                    tf.reshape(in_layers_int, [-1]),
+                    vocab_size
+                ),
+                [-1, in_size, vocab_size],
+                name='oh'
+            )
+
+            in_layers_embed = tf.reshape(
+                self.get_embeddings(
+                    tf.reshape(in_layers_int, [-1]),
+                ),
+                [-1, in_size, embed_size],
+                name='embed'
+            )
 
             in_layers_innerprod = tf.reshape(
                 tf.matmul(
@@ -82,46 +92,54 @@ class TextLstmModel(BaseTextArchitecture):
                     self.char_embeddings,
                     transpose_b=True
                 ),
-                [-1, in_size, vocab_size]
+                [-1, in_size, vocab_size],
+                name='innerprod'
             )
-            in_layers_distro = tf.nn.softmax(in_layers_innerprod)
-
-        with tf.variable_scope('reucrrent_stack'):
-            lstm_layers = append_lstm_stack(self, in_layers_embed, recurr_params, 'lstm')
-            lstm_size = lstm_layers.get_shape().as_list()
-
-        with tf.variable_scope('decoding_sequence'):
-
-            decode_lstm = tf.get_variable("decode_weights", [lstm_size[-1], embed_size])
-            embeds = tf.reshape(
-                tf.matmul(
-                    tf.reshape(lstm_layers, [-1, lstm_size[-1]]),
-                    decode_lstm,
-                ),
-                [-1, in_size, embed_size]
+            in_layers_distro = tf.nn.softmax(
+                in_layers_innerprod,
+                axis=2,
+                name='distro'
             )
+
+        with tf.variable_scope('recurr'):
+            lstm_outputs = append_lstm_stack(self, in_layers_embed, recurr_params, 'lstm')
+            lstm_size = lstm_outputs.get_shape().as_list()
+
+        with tf.variable_scope('decode'):
+            lstm_to_decode = tf.reshape(lstm_outputs, [-1, lstm_size[-1]])
+
+            lstm_decoded = append_dense(
+                self, lstm_to_decode,
+                {'num_units': vocab_size, 'activation': 'tanh'},
+                'dense_0'
+            )
+
+            embeds = tf.reshape(lstm_decoded, [-1, in_size, vocab_size], name='embed')
 
             seq_innerprod = tf.reshape(
-                tf.matmul(
-                    tf.reshape(embeds, [-1, embed_size]),
-                    self.char_embeddings,
-                    transpose_b=True
-                ),
-                [-1, in_size, vocab_size]
+                tf.matmul(lstm_decoded, self.char_embeddings, transpose_b=True),
+                [-1, in_size, vocab_size],
+                name='innerprod'
             )
-            seq_distro = tf.nn.softmax(seq_innerprod)
 
-        with tf.variable_scope('making_output'):
-            output_int = self.make_onehot_decode_layer(seq_distro[:, -1, ...], probabilistic=True)
-            output_str = tf.py_func(_func_int_to_str, [output_int], tf.string)
+            seq_distro = tf.nn.softmax(
+                seq_innerprod,
+                axis=2,
+                name='distro'
+            )
+
+        with tf.variable_scope('output'):
+            output_int = self.make_onehot_decode_layer(seq_distro[:, -1, ...], probabilistic=False)
+            output_str = tf.py_func(_func_int_to_str, [output_int], tf.string, name='string')
             output_str.set_shape([None])
 
         #
         # Set up loss
         #
 
-        loss = tf.reduce_sum(
-            loss_softmax_ce(seq_innerprod[:, 1:, :], in_layers_distro[:, :-1, :])
+        loss = loss_softmax_ce(
+            tf.reshape(seq_innerprod[:, :-1, :], [-1, vocab_size]),
+            tf.reshape(in_layers_onehot[:, 1:, :], [-1, vocab_size]),
         )
 
         return [in_layer], [output_str], [target_layer], embeds, loss

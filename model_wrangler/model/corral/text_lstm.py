@@ -129,7 +129,8 @@ class TextLstmModel(BaseTextArchitecture):
             )
 
         with tf.variable_scope('output'):
-            output_int = self.make_onehot_decode_layer(seq_distro[:, -1, ...], probabilistic=False)
+            #output_int = self.make_onehot_decode_layer(seq_distro[:, -1, ...], probabilistic=False)
+            output_int = self.make_onehot_decode_layer(seq_distro[:, -1, ...], probabilistic=True, temp=1.0/50)
             output_str = tf.py_func(_func_int_to_str, [output_int], tf.string, name='string')
             output_str.set_shape([None])
 

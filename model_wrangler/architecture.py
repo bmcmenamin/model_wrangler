@@ -192,7 +192,7 @@ class BaseTextArchitecture(BaseArchitecture):
         return onehot_layer
 
     @staticmethod
-    def make_onehot_decode_layer(in_layer, probabilistic=False, temp=5.0):
+    def make_onehot_decode_layer(in_layer, probabilistic=False, temp=1.0):
         """Return a layer takes one-hot encoded layer to int
         Args:
             in_layer: A of one-hot endcoded values
@@ -205,7 +205,7 @@ class BaseTextArchitecture(BaseArchitecture):
         """
 
         if probabilistic:
-            out_layer = tf.multinomial(tf.log(tf.nn.softmax(in_layer * temp, axis=-1)), 1)
+            out_layer = tf.multinomial(tf.log(tf.nn.softmax(in_layer / temp, axis=-1)), 1)
         else:
             out_layer = tf.reshape(tf.argmax(in_layer, axis=-1), [-1, 1])
 

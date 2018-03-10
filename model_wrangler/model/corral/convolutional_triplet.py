@@ -1,4 +1,4 @@
-"""Module sets up Convolutional Siamese model"""
+"""Module sets up Convolutional Triplet model"""
 
 import tensorflow as tf
 
@@ -10,8 +10,8 @@ from model_wrangler.model.layers import (
 
 from model_wrangler.model.losses import siamese_embedding_loss
 
-class ConvolutionalSiameseModel(BaseArchitecture):
-    """Convolutional siamese model that has a
+class ConvolutionalTripletModel(BaseArchitecture):
+    """Convolutional triplet model that has a
     couple convolutional layers and a couple of dense
     layers leading up to an embedding layer
     """
@@ -44,7 +44,7 @@ class ConvolutionalSiameseModel(BaseArchitecture):
 
         layer_stack = [in_layer]
         for idx, layer_param in enumerate(hidden_params):
-            with tf.variable_scope('conv_layer_{}/'.format(idx), reuse=tf.AUTO_REUSE):
+            with tf.variable_scope('conv_layer_{}/'.format(idx)):
                 layer_stack.append(self._conv_layer(layer_stack[-1], layer_param))
 
         # Force unit-norm
@@ -53,6 +53,7 @@ class ConvolutionalSiameseModel(BaseArchitecture):
         layer_stack.append(tf.divide(flat, norm, name='embed_norm'))
 
         return layer_stack[-1]
+
 
     def setup_layers(self, params):
 
@@ -91,22 +92,8 @@ class ConvolutionalSiameseModel(BaseArchitecture):
         ]
 
         loss = tf.reduce_sum([
-            tf.contrib.losses.metric_learning.lifted_struct_loss(tf.reshape(targ, [-1]), embeds)
+            tf.contrib.losses.metric_learning.triplet_semihard_loss(tf.reshape(targ, [-1]), embeds)
             for targ in target_layers
         ])
 
         return in_layers, out_layers, target_layers, embeds, loss
-
-
-    def setup_training_step(self, params):
-        """Set up loss and training step"""
-
-        # Import params
-        learning_rate = params.get('learning_rate', 0.01)
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate)
-
-        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-        with tf.control_dependencies(update_ops):
-            train_step = optimizer.minimize(self.loss)
-
-        return train_step

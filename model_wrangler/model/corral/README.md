@@ -34,7 +34,8 @@ Current models:
 
 * `dense_feedforward`: Feedforward net with all dense connections model
 * `convolutional_feedforward`: Feedforward net with convolutional layers and then dense layers
-* `convolutional_siamese`: Convolutional networks trained with siamese pairs
+* `convolutional_siamese`: Convolutional networks for embedding trained using siamese pairs
+* `convolutional_triplet`: Convolutional networks for embedding trained using tiplets
 
 * `text_classification`: A convoluional feedforward net that takes strings as inputs and does all the conversion to numerics internally
 

@@ -109,7 +109,7 @@ class BaseDatasetManager(ABC):
         LOGGER.info('Dataset has %d outputs', self.num_outputs)
 
     @abstractmethod
-    def get_next_batch(self, batch_size=32, eternal=False):
+    def get_next_batch(self, batch_size=32, eternal=False, **kwargs):
         """
         This generator should yield batches of training data
 
@@ -130,7 +130,7 @@ class DatasetManager(BaseDatasetManager):
     batches of data in nearly-random order"""
 
 
-    def get_next_batch(self, batch_size=32, eternal=False):
+    def get_next_batch(self, batch_size=32, eternal=False, **kwargs):
         """
         This generator should yield batches of training data
 
@@ -260,7 +260,7 @@ class BalancedDatasetManager(BaseDatasetManager):
 
         return X, Y
 
-    def get_next_batch(self, positive_classes, batch_size=32, eternal=False):
+    def get_next_batch(self, positive_classes, batch_size=32, eternal=False, **kwargs):
         """
         This generator should yield batches of training data
 
@@ -367,7 +367,7 @@ class SequentialDatasetManager(BaseDatasetManager):
 
         yield X_batch, Y_batch
 
-    def get_next_batch(self, batch_size=32, stride=1, eternal=False):
+    def get_next_batch(self, batch_size=32, stride=1, eternal=False, **kwargs):
         """
         This generator should yield batches of training data
 

@@ -47,6 +47,9 @@ DENSE_PARAMS = {
             'activation': 'relu'
         },
         'out_sizes': [5], 
+    },
+    'tensorboard': {
+        'scalars': ['embed_l1', 'embed_mean']
     }
 }
 

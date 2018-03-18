@@ -81,4 +81,8 @@ class DenseFeedforwardModel(BaseArchitecture):
             [loss_softmax_ce(*pair) for pair in zip(out_layer_preact, target_layers)]
         )
 
-        return in_layers, out_layers, target_layers, embeds, loss
+        tb_scalars = {
+            'embed_l1': tf.reduce_mean(tf.abs(embeds[0])),
+            'embed_mean': tf.reduce_mean(embeds[0])
+        }
+        return in_layers, out_layers, target_layers, embeds, loss, tb_scalars

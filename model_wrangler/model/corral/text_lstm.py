@@ -143,4 +143,5 @@ class TextLstmModel(BaseTextArchitecture):
             tf.reshape(in_layers_onehot[:, 1:, :], [-1, vocab_size]),
         )
 
-        return [in_layer], [output_str], [target_layer], embeds, loss
+        tb_scalars = {}
+        return [in_layer], [output_str], [target_layer], embeds, loss, tb_scalars

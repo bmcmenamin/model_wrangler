@@ -276,24 +276,24 @@ class ModelWrangler(object):
             if train_verbose and ((batch_counter % train_verbose_interval) == 0):
 
                 # Write training stats to tensorboard
-                self.tf_mod.tb_writer['training_loss'].add_summary(
-                    self.sess.run(self.tf_mod.tb_stats, feed_dict=data_dict),
-                    batch_counter
-                )
+                for name, writer in self.tf_mod.tb_writer['training'].items():
+                    writer.add_summary(
+                        self.sess.run(self.tf_mod.tb_stats, feed_dict=data_dict),
+                        batch_counter
+                    )
+                train_error = self.score(train_in, train_out)
+                LOGGER.info("Batch %d: Training score = %0.6f", batch_counter, train_error)
+
 
                 ho_in, ho_out = next(self.holdout_gen)
                 data_dict = self.make_data_dict(ho_in, ho_out, is_training=False)
-                self.tf_mod.tb_writer['validation_loss'].add_summary(
-                    self.sess.run(self.tf_mod.tb_stats, feed_dict=data_dict),
-                    batch_counter
-                )
-
-                # logging elsewhere
-                train_error = self.score(train_in, train_out)
+                for name, writer in self.tf_mod.tb_writer['validation'].items():
+                    writer.add_summary(
+                        self.sess.run(self.tf_mod.tb_stats, feed_dict=data_dict),
+                        batch_counter
+                    )
                 holdout_error = self.score(ho_in, ho_out)
-                LOGGER.info("Batch %d: Training score = %0.6f", batch_counter, train_error)
                 LOGGER.info("Batch %d: Holdout score = %0.6f", batch_counter, holdout_error)
-
 
     def train(self):
         """

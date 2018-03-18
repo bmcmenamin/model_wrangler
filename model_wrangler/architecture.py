@@ -67,19 +67,9 @@ class BaseArchitecture(ABC):
             [loss_sigmoid_ce(*pair) for pair in zip(target_layers, out_layers)]
         )
 
-        return in_layers, out_layers, target_layers, embeds, loss
+        tb_scalars = {}
 
-    def setup_tensorboard_writers(self, tb_log_path, writers):
-        """Set up summary stats to track in tensorboard"""
-
-        tb_writer = {
-            'graph': tf.summary.FileWriter(tb_log_path, self.graph),
-        }
-
-        for w in writers:
-            tb_writer[w] = tf.summary.FileWriter(os.path.join(tb_log_path, w))
-
-        return tb_writer
+        return in_layers, out_layers, target_layers, embeds, loss, tb_scalars
 
     def setup_training_step(self, params):
         """Set up loss and training step"""
@@ -94,6 +84,36 @@ class BaseArchitecture(ABC):
             train_step = optimizer.minimize(self.loss)
 
         return train_step
+
+    def setup_tb_stats(self, params):
+        """Set up tensorboard stats to track"""
+
+        tb_params = params.get('tensorboard', {})
+
+        scalar_dict = {
+            name: self.tb_scalars.get(name)
+            for name in tb_params.get('scalars', [])
+        }
+        scalar_dict.update({'loss': self.loss})
+
+        # Set up writers
+        tb_writer = {
+            'graph': tf.summary.FileWriter(params['path'], self.graph)
+        }
+
+        for phase in ['training', 'validation']:
+            tb_writer[phase] = {
+                w: tf.summary.FileWriter(os.path.join(params['path'], '_'.join([phase, w])))
+                for w in scalar_dict.keys()
+            }
+
+        # Set up scalars
+        for name, val in scalar_dict.items():
+            tf.summary.scalar(name, val)
+
+        tb_stats = tf.summary.merge_all()
+
+        return tb_writer, tb_stats
 
     def __init__(self, params):
         """Initialize a tensorflow model"""
@@ -111,6 +131,7 @@ class BaseArchitecture(ABC):
         self.targets = None
         self.embeds = None
         self.loss = None
+        self.tb_scalars = None
         self.train_step = None
 
         self.graph = tf.Graph()
@@ -118,16 +139,15 @@ class BaseArchitecture(ABC):
 
             self.is_training = tf.placeholder("bool", name="is_training")
 
-            self.inputs, self.outputs, self.targets, self.embeds, self.loss = self.setup_layers(graph_params)
+            (
+                self.inputs, self.outputs, self.targets,
+                self.embeds,
+                self.loss, self.tb_scalars
+            ) = self.setup_layers(graph_params)
+
             self.train_step = self.setup_training_step(train_params)
 
-            self.tb_writer = self.setup_tensorboard_writers(
-                params['path'],
-                ['training_loss', 'validation_loss']
-            )
-
-            tf.summary.scalar('loss', self.loss)
-            self.tb_stats = tf.summary.merge_all()
+            self.tb_writer, self.tb_stats = self.setup_tb_stats(params)
 
             self.saver = tf.train.Saver(
                 name=params['name'],

@@ -92,4 +92,5 @@ class DenseAutoencoderModel(BaseArchitecture):
             [loss_mse(*pair) for pair in zip(out_layers, target_layers)]
         )
 
-        return in_layers, out_layers, target_layers, embeds, loss
+        tb_scalars = {}
+        return in_layers, out_layers, target_layers, embeds, loss, tb_scalars

@@ -95,7 +95,8 @@ class ConvolutionalSiameseModel(BaseArchitecture):
             for targ in target_layers
         ])
 
-        return in_layers, out_layers, target_layers, embeds, loss
+        tb_scalars = {}
+        return in_layers, out_layers, target_layers, embeds, loss, tb_scalars
 
 
     def setup_training_step(self, params):

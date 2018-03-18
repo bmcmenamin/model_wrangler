@@ -60,4 +60,5 @@ class LinearRegressionModel(BaseArchitecture):
         )
 
         embeds = None
-        return in_layers, out_layers, target_layers, embeds, loss
+        tb_scalars = {}
+        return in_layers, out_layers, target_layers, embeds, loss, tb_scalars

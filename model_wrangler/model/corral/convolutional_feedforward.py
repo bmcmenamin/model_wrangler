@@ -100,4 +100,5 @@ class ConvolutionalFeedforwardModel(BaseArchitecture):
             [loss_softmax_ce(*pair) for pair in zip(out_layer_preact, target_layers)]
         )
 
-        return in_layers, out_layers, target_layers, embeds, loss
+        tb_scalars = {}
+        return in_layers, out_layers, target_layers, embeds, loss, tb_scalars

@@ -93,6 +93,7 @@ class BaseArchitecture(ABC):
         scalar_dict = {
             name: self.tb_scalars.get(name)
             for name in tb_params.get('scalars', [])
+            if name in self.tb_scalars
         }
         scalar_dict.update({'loss': self.loss})
 

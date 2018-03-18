@@ -339,36 +339,41 @@ class SequentialDatasetManager(BaseDatasetManager):
 
         LOGGER.info('Dataset has %d inputs', self.num_inputs)
 
-    def _yield_batches(self, X, batch_size):
+    def _yield_batches(self, X, batch_size, stride=1):
 
         X_batch, Y_batch = [[]], [[]]
         for seq in X[0]:
-
+            counter = -1
             for win in self._sliding_window(iter(seq), win_len=self.in_win_len + self.out_win_len):
+                counter += 1
+                if counter > stride:
+                    counter = 0
 
-                if len(X_batch[0]) == batch_size:
-                    X_batch, Y_batch = [[]], [[]]
+                if counter == 0:
+                    if len(X_batch[0]) == batch_size:
+                        X_batch, Y_batch = [[]], [[]]
+    
+                    x, y = win[:self.in_win_len], win[-self.out_win_len:]
+    
+                    if isinstance(win[0], str):
+                        x = ''.join(x)
+                        y = ''.join(y)
 
-                x, y = win[:self.in_win_len], win[-self.out_win_len:]
-
-                if isinstance(win[0], str):
-                    x = ''.join(x)
-                    y = ''.join(y)
-
-                X_batch[0].append(x)
-                Y_batch[0].append(y)
-
-                if len(X_batch[0]) == batch_size:
-                    yield X_batch, Y_batch
+                    X_batch[0].append(x)
+                    Y_batch[0].append(y)
+    
+                    if len(X_batch[0]) == batch_size:
+                        yield X_batch, Y_batch
 
         yield X_batch, Y_batch
 
-    def get_next_batch(self, batch_size=32, eternal=False):
+    def get_next_batch(self, batch_size=32, stride=1, eternal=False):
         """
         This generator should yield batches of training data
 
         Args:
             batch_size: int for number of samples in batch
+            stride: sample the data every N steps
             eternal: Keep pulling samples forever, or stop after an epoch?
                 for some data, it's hard to know when an epoch is over so
                 you should use eternal and cap the number of batches
@@ -380,5 +385,5 @@ class SequentialDatasetManager(BaseDatasetManager):
 
         for X in X_gen:
             X = self._shuffle_data(X, None)[0]
-            for x, y in self._yield_batches(X, batch_size):
+            for  x, y in self._yield_batches(X, batch_size, stride=stride):
                 yield x, y

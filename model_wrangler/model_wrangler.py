@@ -303,12 +303,13 @@ class ModelWrangler(object):
         num_epochs = self.training_params.get('num_epochs', 1)
         epoch_length = self.training_params.get('epoch_length', None)
         batch_size = self.training_params.get('batch_size', 32)
+        stride = self.training_params.get('stride', 1)
 
         self.training_gen = self.training_data.get_next_batch(
-            batch_size=batch_size, eternal=epoch_length is not None)
+            batch_size=batch_size, stride=stride, eternal=epoch_length is not None)
 
         self.holdout_gen = self.holdout_data.get_next_batch(
-            batch_size=batch_size, eternal=True)
+            batch_size=batch_size, stride=stride, eternal=True)
 
         try:
             for epoch in range(num_epochs):

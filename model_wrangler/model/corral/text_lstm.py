@@ -110,7 +110,7 @@ class TextLstmModel(BaseTextArchitecture):
 
             lstm_decoded = append_dense(
                 self, lstm_to_decode,
-                {'num_units': vocab_size, 'activation': 'tanh'},
+                {'num_units': embed_size, 'activation': 'tanh'},
                 'dense_0'
             )
 

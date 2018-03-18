@@ -225,6 +225,7 @@ def append_maxpooling(architecture, input_layer, layer_config, name):
         layer_config: dict of layer params
             'pool_size' -> int or list of <dim> ints, default = 5
             'strides' -> int or list of <dim> ints, default = 1
+            'padding' -> 'same' or 'valid', default = 'valid'
         name: layer name
 
     Returns:
@@ -238,6 +239,7 @@ def append_maxpooling(architecture, input_layer, layer_config, name):
         input_layer,
         pool_size=layer_config.get('pool_size', 1),
         strides=layer_config.get('strides', 1),
+        padding=layer_config.get('padding', 'valid'),
         name=name
     )
     return pool_layer

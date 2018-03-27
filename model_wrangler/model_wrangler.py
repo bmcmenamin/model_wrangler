@@ -259,11 +259,12 @@ class ModelWrangler(object):
 
         return importance
 
-    def _run_epoch(self):
+    def _run_epoch(self, offset):
         """Run an epoch of training"""
 
         train_verbose = self.training_params.get('verbose', True)
         train_verbose_interval = self.training_params.get('interval', 100)
+        train_save_interval = self.training_params.get('save_interval', 5 * train_verbose_interval)
 
         for batch_counter, (train_in, train_out) in enumerate(self.training_gen):
 
@@ -273,27 +274,31 @@ class ModelWrangler(object):
             data_dict = self.make_data_dict(train_in, train_out, is_training=True)
             self.sess.run(self.tf_mod.train_step, feed_dict=data_dict)
 
+            if (batch_counter % train_save_interval) == 0:
+                self.save(batch_counter + offset)
+
             if train_verbose and ((batch_counter % train_verbose_interval) == 0):
 
                 # Write training stats to tensorboard
                 for name, writer in self.tf_mod.tb_writer['training'].items():
                     writer.add_summary(
                         self.sess.run(self.tf_mod.tb_stats, feed_dict=data_dict),
-                        batch_counter
+                        batch_counter + offset
                     )
                 train_error = self.score(train_in, train_out)
                 LOGGER.info("Batch %d: Training score = %0.6f", batch_counter, train_error)
-
 
                 ho_in, ho_out = next(self.holdout_gen)
                 data_dict = self.make_data_dict(ho_in, ho_out, is_training=False)
                 for name, writer in self.tf_mod.tb_writer['validation'].items():
                     writer.add_summary(
                         self.sess.run(self.tf_mod.tb_stats, feed_dict=data_dict),
-                        batch_counter
+                        batch_counter + offset
                     )
                 holdout_error = self.score(ho_in, ho_out)
                 LOGGER.info("Batch %d: Holdout score = %0.6f", batch_counter, holdout_error)
+
+        self.save(batch_counter + offset)
 
     def train(self):
         """
@@ -314,8 +319,7 @@ class ModelWrangler(object):
         try:
             for epoch in range(num_epochs):
                 LOGGER.info('Starting Epoch %d', epoch)
-                self._run_epoch()
-                self.save(epoch)
+                self._run_epoch(epoch * epoch_length)
 
                 if not epoch_length:
                     self.training_gen = self.training_data.get_next_batch(

@@ -337,6 +337,30 @@ def append_onehot_decode(architecture, input_layer, layer_config, name):
     out_layer = tf.argmax(in_layer, axis=-1)
     return out_layer
 
+def append_categorical(architecture, input_layer, layer_config, name):
+    """Add a categorical layer that'll siwtch between one-hot or sigmoid
+
+    Args:
+        architecture: model architecture object
+        input_layer: the previous layer that feeds into this
+        layer_config: dict of layer params
+            none requires
+        name: layer name
+
+    Returns:
+        TF layer with one-hot decoded
+    """
+
+    observed_shape = input_layer.get_shape().as_list()
+    if len(observed_shape) == 2 and observed_shape[1] == 1:
+        thresh = layer_config.get('thresh', 0.0)
+        out_layer = tf.greater_equal(input_layer, tf.constant(thresh, input_layer.dtype))
+    else:
+        out_layer = tf.argmax(input_layer, axis=-1)
+
+    out_layer = tf.cast(out_layer, tf.int32)
+    return out_layer
+
 
 def fit_to_shape(architecture, in_layer, layer_config, name):
     """Use 0-padding and cropping to make a layer conform to the

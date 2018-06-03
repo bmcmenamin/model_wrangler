@@ -5,7 +5,7 @@ import tensorflow as tf
 from model_wrangler.architecture import BaseArchitecture
 from model_wrangler.model.layers import (
     append_dropout, append_batchnorm, append_dense, append_conv,
-    append_maxpooling
+    append_maxpooling, append_categorical
 )
 from model_wrangler.model.losses import loss_softmax_ce
 
@@ -67,23 +67,22 @@ class ConvolutionalFeedforwardModel(BaseArchitecture):
                     self._conv_layer(layer_stack[-1], layer_param)
                 )
 
-
         # Flatten convolutional layers
         layer_stack.append(
             tf.contrib.layers.flatten(layer_stack[-1])
         )
 
-        embeds = [layer_stack[-1]]
+        embeds = [append_dense(self, layer_stack[-1], embed_params, 'embed_{}'.format(idx))]
 
         # Add final embedding layers
 
         out_layer_preact = [
-            append_dense(self, layer_stack[-1], embed_params, 'preact_{}'.format(idx))
+            append_dense(self, embeds[-1], dict(num_units=out_size), 'preact_{}'.format(idx))
             for idx, out_size in enumerate(out_sizes)
         ]
 
         out_layers = [
-            tf.nn.softmax(layer, name='output_{}'.format(idx))
+            append_categorical(self, layer, {}, name='output_{}'.format(idx))
             for idx, layer in enumerate(out_layer_preact)            
         ]
 

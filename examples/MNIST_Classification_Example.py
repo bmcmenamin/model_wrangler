@@ -96,7 +96,6 @@ TRAIN_PARAMS = {
 }
 
 
-
 # Set up a dataset manager for categorical data
 model = ModelWrangler(ConvolutionalFeedforwardModel, CONV_PARAMS)
 model.add_train_params(TRAIN_PARAMS)

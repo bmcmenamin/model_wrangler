@@ -9,8 +9,7 @@ import tensorflow as tf
 from model_wrangler.dataset_managers import DatasetManager
 
 def _get_shapes(tf_model):
-
-    input_shape = [[i.value for i in j.get_shape()[1:]] for j in tf_model.inputs]
+    input_shape = [[i.value for i in j.get_shape()[1:]] for j in tf_model.inputs]    
     output_shape = [[i.value for i in j.get_shape()[1:]] for j in tf_model.outputs]
     return input_shape, output_shape
 

@@ -78,8 +78,12 @@ def compare_scikt_and_tf(sk_model, tf_model, X, y, sk_params={}):
     print('\tpost-score: {}'.format(tf_model.score([X], [y])))
 
     print('TF values:')
-    print('\t coef: {}'.format(tf_model.get_from_model('params/coeff_0').ravel()))
-    print('\t int: {}'.format(tf_model.get_from_model('params/intercept_0').ravel()))
+
+    data_dict = tf_model.make_data_dict([X], [y], is_training=False)
+    tf_coef = tf_model.get_from_model('params/coeff_0', data_dict)
+    tf_int = tf_model.get_from_model('params/intercept_0', data_dict)
+    print('\t coef: {}'.format(tf_coef.ravel()))
+    print('\t int: {}'.format(tf_int.ravel()))
 
     try:
         corr = np.mean(

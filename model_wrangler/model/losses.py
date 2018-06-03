@@ -34,6 +34,10 @@ def loss_sigmoid_ce(observed, actual):
 def loss_softmax_ce(observed, actual):
     """Calculate softmax cross entropy loss"""
 
+    observed_shape = observed.get_shape().as_list()
+    if len(observed_shape) == 2 and observed_shape[1] == 1:
+        return loss_sigmoid_ce(observed, actual)
+
     per_sample_loss = tf.nn.softmax_cross_entropy_with_logits_v2(
         logits=observed,
         labels=actual
@@ -46,10 +50,35 @@ def loss_softmax_ce(observed, actual):
 def accuracy(observed, actual):
     """Accuracy for one-hot encoded categories"""
 
-    is_correct = tf.equal(tf.argmax(observed, axis=1), tf.argmax(actual, axis=1))
+    observed_shape = observed.get_shape().as_list()
+    if len(observed_shape) == 2 and observed_shape[1] == 1:
+        is_correct = tf.equal(tf.cast(observed, tf.int32), tf.cast(actual, tf.int32))
+    else:
+        is_correct = tf.equal(tf.argmax(observed, axis=1), tf.argmax(actual, axis=1))
+
     acc = tf.reduce_mean(tf.cast(is_correct, tf.float32))
     return acc
 
+def loss_crossgroup_bias(observed, actual, group_idx):
+    """Return the variance in errors across groups"""
+
+    pred_err = actual - observed
+
+    mean_err_per_group = tf.unsorted_segment_sum(
+        pred_err,
+        group_idx,
+        tf.reduce_max(group_idx) + 1,
+        name='mean_error_per_group'
+    )
+
+    var_err_across_group = tf.reduce_mean(
+        tf.square(mean_err_per_group - tf.reduce_mean(mean_err_per_group, axis=0)),
+        axis=0
+    )
+
+    var_err_across_group = tf.reduce_mean(var_err_across_group)
+
+    return var_err_across_group
 
 def tensor_diff(tensor_0, tensor_1):
     return tf.reduce_sum(tf.square(tensor_0 - tensor_1), 1)
@@ -64,7 +93,10 @@ def siamese_embedding_loss(embed_0, embed_1, is_match, margin=1.0):
     diff = tensor_diff(embed_0, embed_1)
     diff_sqrt = tf.sqrt(diff)
 
-    loss_per_sample = is_match * tf.square(tf.maximum(0., margin - diff_sqrt)) + (1 - is_match) * diff
+    loss_per_sample = (
+        is_match * tf.square(tf.maximum(0., margin - diff_sqrt)) + 
+        (1 - is_match) * diff
+    )
     loss = 0.5 * tf.reduce_mean(loss_per_sample)
 
     return loss

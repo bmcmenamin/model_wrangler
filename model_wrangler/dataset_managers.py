@@ -169,46 +169,17 @@ class BalancedDatasetManager(BaseDatasetManager):
             determine pos/neg class
     """
 
-    def _setup_positive_class_def(self, positive_classes):
-        """Make sure the positive class definition is correct"""
+    def __init__(self, X, Y):
+        self.positive_classes = None
+        super().__init__(X, Y)
 
-        if len(positive_classes) != self.num_outputs:
-            raise ValueError(
-                'Positive classes defined for {} outputs '
-                'but the data has {} outputs'.format(
-                    len(positive_classes),
-                    self.num_outputs
-                )
-            )
-
-        for idx, func in enumerate(positive_classes):
-
-            if func is None:
-                positive_classes[idx] = lambda x: False
-
-            elif isinstance(func, set) is None:
-                positive_classes[idx] = lambda x: x in func
-
-            elif isinstance(func, list) is None:
-                positive_classes[idx] = lambda x: x in set(func)
-
-            elif not hasattr(func, '__call__'):
-                raise AttributeError(
-                    'Positive class definition {}, ({}) is not valid. '
-                    'Must be either None, a callable function or a list/set of '
-                    'allowable values'
-                    .format(idx, func)
-                )
-
-        return positive_classes
-
-    def _find_positive_class_samples(self, positive_classes, data_in):
+    def _find_positive_class_samples(self, data_in):
         """Return a list of booleans indicating whether a particular
         sample is in the positive class"""
 
         pos_idx = [
             any(sample) for sample in
-            zip(*[map(func, data) for func, data in zip(positive_classes, data_in)])
+            zip(*[map(func, data) for func, data in zip(self.positive_classes, data_in)])
         ]
 
         return pos_idx
@@ -224,13 +195,13 @@ class BalancedDatasetManager(BaseDatasetManager):
         new_list.extend(pad_values)
         return new_list
 
-    def _shuffle_data(self, X, Y, positive_classes):
+    def _shuffle_data(self, X, Y):
         """Suffle input/output sample order after doing up/downsampling
         to make sure that the positive/negative classes are equally
         balanced
         """
 
-        is_pos_bool = self._find_positive_class_samples(positive_classes, Y)
+        is_pos_bool = self._find_positive_class_samples(Y)
 
         pos_idx = []
         neg_idx = []
@@ -260,13 +231,53 @@ class BalancedDatasetManager(BaseDatasetManager):
 
         return X, Y
 
-    def get_next_batch(self, positive_classes, batch_size=32, eternal=False, **kwargs):
-        """
-        This generator should yield batches of training data
+    def set_positive_class(self, positive_classes):
+        """Make sure the positive class definition is correct
 
         Args:
             positive_classes: list of functions defining the 'positive class'
                 based on each output type
+        """
+
+        self.positive_classes = []
+
+        if len(positive_classes) != self.num_outputs:
+            raise ValueError(
+                'Positive classes defined for {} outputs '
+                'but the data has {} outputs'.format(
+                    len(positive_classes),
+                    self.num_outputs
+                )
+            )
+
+        for idx, func in enumerate(positive_classes):
+
+            if func is None:
+                self.positive_classes.append(lambda x: False)
+
+            elif isinstance(func, set):
+                self.positive_classes.append(
+                    lambda x: tuple(x) in set([tuple(i) for i in list(func)])
+                )
+
+            elif isinstance(func, list):
+                self.positive_classes.append(
+                    lambda x: tuple(x) in set([tuple(i) for i in func])
+                )
+
+            elif not hasattr(func, '__call__'):
+                raise AttributeError(
+                    'Positive class definition {}, ({}) is not valid. '
+                    'Must be either None, a callable function or a list/set of '
+                    'allowable values'
+                    .format(idx, func)
+                )
+
+    def get_next_batch(self, batch_size=32, eternal=False, **kwargs):
+        """
+        This generator should yield batches of training data
+
+        Args:
             batch_size: int for number of samples in batch
             eternal: Keep pulling samples forever, or stop after an epoch?
                 for some data, it's hard to know when an epoch is over so
@@ -275,12 +286,11 @@ class BalancedDatasetManager(BaseDatasetManager):
             X, Y: lists of input/output samples
         """
 
-        positive_classes = self._setup_positive_class_def(positive_classes)
         X_gen = self._input_to_generators(self.X, eternal=eternal)
         Y_gen = self._input_to_generators(self.Y, eternal=eternal)
 
         for X, Y in zip(X_gen, Y_gen):
-            X, Y = self._shuffle_data(X, Y, positive_classes)
+            X, Y = self._shuffle_data(X, Y)
             for x, y in self._yield_batches(X, Y, batch_size):
                 yield x, y
 

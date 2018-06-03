@@ -192,7 +192,6 @@ class ModelWrangler(object):
 
         return new_model
 
-
     def predict(self, input_x):
         """Get activations for every layer given an input matrix, input_x"""
 
@@ -229,12 +228,14 @@ class ModelWrangler(object):
             score_func = self.tf_mod.loss
         else:
             with self.tf_mod.graph.as_default():
-                score_func = tf.reduce_mean([score_func(*pair) for pair in zip(self.tf_mod.outputs, self.tf_mod.targets)])
+                score_func = tf.reduce_mean([
+                    score_func(*pair)
+                    for pair in zip(self.tf_mod.outputs, self.tf_mod.targets)
+                ])
         val = score_func.eval(feed_dict=data_dict, session=self.sess)
-
         return val
 
-    def feature_importance(self, input_x, target_y, score_func=None):
+    def feature_importance(self, input_x, target_y, input_idxs=None, score_func=None):
         """Calculate feature importances"""
 
         # which layer has the features you care about?
@@ -245,13 +246,15 @@ class ModelWrangler(object):
         if score_func is None:
             score_func = self.tf_mod.loss
 
-        grad_wrt_input = tf.gradients(
-            score_func,
-            self.tf_mod.inputs
-        )
+        if input_idxs is None:
+            inputs_to_scan = self.tf_mod.inputs
+        else:
+            inputs_to_scan = [self.tf_mod.inputs[i] for i in input_idxs]
+
+        grad_wrt_input = tf.gradients(score_func, inputs_to_scan)
 
         grad_wrt_input_vals = self.sess.run(
-            grad_wrt_inputs,
+            grad_wrt_input,
             feed_dict=data_dict
         )[feature_layer_idx]
 
@@ -317,9 +320,16 @@ class ModelWrangler(object):
             batch_size=batch_size, stride=stride, eternal=True)
 
         try:
+            offset = 0
             for epoch in range(num_epochs):
                 LOGGER.info('Starting Epoch %d', epoch)
-                self._run_epoch(epoch * epoch_length)
+
+                if epoch_length:
+                    offset = epoch * epoch_length
+                else:
+                    offset += 1
+
+                self._run_epoch(offset)
 
                 if not epoch_length:
                     self.training_gen = self.training_data.get_next_batch(

@@ -5,11 +5,13 @@
 import tensorflow as tf
 
 from model_wrangler.architecture import BaseArchitecture
-from model_wrangler.model.layers import append_dropout, append_batchnorm, append_dense, append_categorical
-from model_wrangler.model.losses import loss_softmax_ce
+from model_wrangler.model.layers import (
+    append_dropout, append_batchnorm, append_dense, append_categorical
+)
+from model_wrangler.model.losses import loss_softmax_ce, loss_crossgroup_bias
 
-class DenseFeedforwardModel(BaseArchitecture):
-    """Dense Feedforward"""
+class DebiasedClassifier(BaseArchitecture):
+    """Dense Feedforward with corrections for group bias"""
 
     # pylint: disable=too-many-instance-attributes
 
@@ -25,6 +27,9 @@ class DenseFeedforwardModel(BaseArchitecture):
         embed_params = params.get('embed_params', [])
         out_sizes = params.get('out_sizes', [])
 
+        debias_weight = params.get('debias_weight', None)
+
+
         #
         # Build model
         #
@@ -34,8 +39,10 @@ class DenseFeedforwardModel(BaseArchitecture):
             for idx, in_size in enumerate(in_sizes)
         ]
 
+        group_indexes = tf.cast(in_layers[-1], tf.int32)
+
         flat_input = tf.concat(
-            [tf.contrib.layers.flatten(layer) for layer in in_layers],
+            [tf.contrib.layers.flatten(layer) for layer in in_layers[:-1]],
             name='flat_inputs',
             axis=-1
         )
@@ -77,9 +84,21 @@ class DenseFeedforwardModel(BaseArchitecture):
         # Set up loss
         #
 
-        loss = tf.reduce_sum(
+        loss_pred = tf.reduce_sum(
             [loss_softmax_ce(*pair) for pair in zip(out_layer_preact, target_layers)]
         )
+
+        if debias_weight and debias_weight > 0.0:
+            loss_bias = tf.reduce_mean(
+                [
+                    loss_crossgroup_bias(tf.sigmoid(pair[0]), pair[1], group_indexes)
+                    for pair in zip(out_layer_preact, target_layers)
+                ]
+            )
+
+            loss = loss_pred + (debias_weight * tf.sqrt(loss_bias))
+        else:
+            loss = loss_pred
 
         tb_scalars = {
             'embed_l1': tf.reduce_mean(tf.abs(embeds[0])),
